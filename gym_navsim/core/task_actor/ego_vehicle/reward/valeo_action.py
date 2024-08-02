@@ -13,12 +13,13 @@ class ValeoAction(object):
     def __init__(self, ego_vehicle):
         self.ego_vehicle = ego_vehicle
         self.scene = ego_vehicle.scene
-        self.trajectory = ego_vehicle.trajectory
         self.metric_cache = ego_vehicle.metric_cache
         self._last_steer = 0
         self._maximum_speed = 6.0
 
     def get(self, terminal_reward):
+        calculate_trajectory = self.ego_vehicle.trajectory[4:] # Origin is not included in trajectory
+        self.traj = calculate_trajectory # Şimdilik fonksiyona böyle vericem sonra hallederim
         reward_debug = self.update_pdm_score(terminal_reward)
 
         if abs(self.ego_vehicle.steer - self._last_steer) > 0.01:
@@ -27,13 +28,13 @@ class ValeoAction(object):
             r_action = 0.0
         self._last_steer = self.ego_vehicle.steer
 
-        rotated_pdm_points = self.convert_relative_trajectories(self.ego_vehicle.route[:,:3],self.ego_vehicle.time - 1,self.ego_vehicle.trajectory,self.ego_vehicle.human_trajectory,3)
-        d_vec = self.ego_vehicle.trajectory[-1,:2] - rotated_pdm_points[self.ego_vehicle.time - 1,:2]
+        rotated_pdm_points = self.convert_relative_trajectories(self.ego_vehicle.route[:,:3],self.ego_vehicle.time - 1,calculate_trajectory,self.ego_vehicle.human_trajectory,3)
+        d_vec = calculate_trajectory[-1,:2] - rotated_pdm_points[self.ego_vehicle.time - 1,:2]
         unit_right = np.array([0,1])
         lateral_distance = np.abs(np.dot(d_vec,unit_right))
         r_position = -1.0 * (lateral_distance / 2.0)
 
-        angle_difference = np.abs(self.ego_vehicle.trajectory[-1,2] - rotated_pdm_points[self.ego_vehicle.time - 1,2]) / np.pi
+        angle_difference = np.abs(calculate_trajectory[-1,2] - rotated_pdm_points[self.ego_vehicle.time - 1,2]) / np.pi
         r_rotation = -1.0 * angle_difference
 
         desired_spd_veh = self._maximum_speed
@@ -62,9 +63,9 @@ class ValeoAction(object):
         future_sampling = TrajectorySampling(num_poses=len(poses), interval_length=0.5)
         return Trajectory(poses=poses, trajectory_sampling=future_sampling)
     def update_pdm_score(self,terminal_reward):
-        calculate_len = len(self.ego_vehicle.trajectory)
+        calculate_len = len(self.traj)
         initial_ego_state = self.metric_cache.ego_state
-        pred_trajectory = transform_trajectory(self._convert_to_trajectory(self.ego_vehicle.trajectory),initial_ego_state)
+        pred_trajectory = transform_trajectory(self._convert_to_trajectory(self.traj),initial_ego_state)
         pdm_trajectory = self.metric_cache.trajectory
         future_sampling = TrajectorySampling(num_poses=5 * calculate_len,interval_length=0.1)
         pdm_states, pred_states = (
@@ -152,7 +153,7 @@ class ValeoAction(object):
                 box[BoundingBoxIndex.HEADING],
             )
             # -1 on time because we are rewarding previous frame
-            x,y,heading = self.convert_relative_trajectories_bb(bb,self.ego_vehicle.time - 1,self.ego_vehicle.trajectory,self.ego_vehicle.human_trajectory,self.ego_vehicle.time -1 + 4) 
+            x,y,heading = self.convert_relative_trajectories_bb(bb,self.ego_vehicle.time - 1,self.traj,self.ego_vehicle.human_trajectory,self.ego_vehicle.time -1 + 4) 
             same_heading = np.abs(heading) <= np.pi / 6 * 5 # Neden 150 yapmışlar anlamadım
             with_distance_ahead = self.is_within_distance_ahead(np.array([x,y]), proximity_threshold, up_angle_th=45)
             if same_heading and with_distance_ahead:
@@ -168,7 +169,7 @@ class ValeoAction(object):
                 box[BoundingBoxIndex.Y],
                 box[BoundingBoxIndex.HEADING],
             )
-            x,y,heading = self.convert_relative_trajectories_bb(bbox,self.ego_vehicle.time,self.ego_vehicle.trajectory,self.ego_vehicle.human_trajectory)
+            x,y,heading = self.convert_relative_trajectories_bb(bbox,self.ego_vehicle.time,self.traj,self.ego_vehicle.human_trajectory)
             dist = np.linalg.norm(np.array([x,y]))
             degree = 162 / (np.clip(dist, 1.5, 10.5)+0.3)
             if self.is_within_distance_ahead(np.array([x,y]), proximity_threshold, up_angle_th=degree):

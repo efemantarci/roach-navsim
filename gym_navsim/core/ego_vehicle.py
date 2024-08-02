@@ -8,12 +8,11 @@ class EgoVehicle:
     def __init__(self,scene) -> None:
         self.scene = scene
         self.agent_input = scene.get_agent_input().ego_statuses[-1]
-        self.trajectory = None # Lazily loaded
         self.collision_px = False
         # Metric cache
         metadata = self.scene.scene_metadata
         # This will change
-        metric_cache_path = os.environ.get("NAVSIM_EXP_ROOT") + metadata.log_name + "/unknown/" + metadata.initial_token + "/metric_cache.pkl"
+        metric_cache_path = os.path.join(os.environ.get("NAVSIM_EXP_ROOT"),"public_test_metric_cache",metadata.log_name,"unknown",metadata.initial_token,"metric_cache.pkl")
         f = lzma.open(metric_cache_path,"rb")
         self.metric_cache = pickle.load(f)
         # Route info
@@ -42,6 +41,7 @@ class EgoVehicle:
         past_poses = np.array([ego_status.ego_pose for ego_status in self.scene.get_agent_input().ego_statuses])
         human_poses = np.array(self.scene.get_future_trajectory().poses)
         self.human_trajectory = np.concatenate([past_poses,human_poses])
+        self.trajectory = past_poses
         self.past_poses = past_poses
     def rotate(self,points, angle):
         """Rotate points by a given angle."""

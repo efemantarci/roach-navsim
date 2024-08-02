@@ -4,7 +4,3 @@ envs:
     env_configs:
       render_mode: human
     gpu: [0]
-  - env_id: navsim-v0
-    env_configs:
-      render_mode: human
-    gpu: [0]

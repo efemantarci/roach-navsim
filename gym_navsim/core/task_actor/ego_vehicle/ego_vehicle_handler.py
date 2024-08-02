@@ -51,15 +51,9 @@ class EgoVehicleHandler(object):
             delta_y = throttle * np.sin(angle) * speed
 
             old_trajectory = self.terminal_handlers[ev_id].ego_vehicle.trajectory
-            if old_trajectory is None:
-                old_trajectory = np.array([[0,0,0]])
-                last_trajectory = old_trajectory[-1]
-                new_trajectory = np.array([[delta_x, delta_y, angle]])
-                added_trajectory = new_trajectory
-            else:
-                last_trajectory = old_trajectory[-1]
-                added_trajectory = np.array([[last_trajectory[0] + delta_x, last_trajectory[1] + delta_y, last_trajectory[2] + angle]])
-                new_trajectory = np.concatenate([old_trajectory, added_trajectory])
+            last_trajectory = old_trajectory[-1]
+            added_trajectory = np.array([[last_trajectory[0] + delta_x, last_trajectory[1] + delta_y, last_trajectory[2] + angle]])
+            new_trajectory = np.concatenate([old_trajectory, added_trajectory])
             self.terminal_handlers[ev_id].ego_vehicle.trajectory = new_trajectory
             self.reward_handlers[ev_id].ego_vehicle.trajectory = new_trajectory
             self.ego_vehicles[ev_id].steer = steer

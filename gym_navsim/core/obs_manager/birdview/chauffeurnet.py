@@ -94,11 +94,7 @@ class ObsManager(ObsManagerBase):
         self.scene = self.ego_vehicle.scene
         start_idx = self.scene.scene_metadata.num_history_frames + time - 1
         human_trajectory_arr = self.ego_vehicle.human_trajectory
-        past_poses = self.ego_vehicle.past_poses
-        if self.ego_vehicle.trajectory is None:
-            trajectory_arr = past_poses
-        else:
-            trajectory_arr = np.concatenate([past_poses,self.ego_vehicle.trajectory])
+        trajectory_arr = self.ego_vehicle.trajectory
         for history_idx in self._history_idx:
             past_idx = start_idx + history_idx
             frame = self.scene.frames[past_idx]
@@ -199,18 +195,9 @@ class ObsManager(ObsManagerBase):
         ]
         frame = self.scene.frames[start_idx]
         initial_ego_state = self.ego_vehicle.metric_cache.ego_state
-        if self.ego_vehicle.trajectory is None:
-            origin = StateSE2(*frame.ego_status.ego_pose)
-        elif len(self.ego_vehicle.trajectory) == 1:
-            origin = StateSE2(*(frame.ego_status.ego_pose + self.ego_vehicle.trajectory[0]))
-        else:   
-            # Hardcodelu şimdilik
-            pred_sampling = TrajectorySampling(num_poses=len(trajectory_arr[4:]),interval_length=0.5)
-            pred_traj = Trajectory(poses=trajectory_arr[4:],trajectory_sampling=pred_sampling)
-            pred_trajectory = transform_trajectory(pred_traj,initial_ego_state)
-            pred_states = get_trajectory_as_array(pred_trajectory, pred_sampling, initial_ego_state.time_point)
-            #print("Trajectory :",trajectory_arr)
-            origin = StateSE2(*pred_states[time][:3])
+        # Hardcodelu şimdilik
+        #print("Trajectory :",trajectory_arr)
+        origin = StateSE2(*(trajectory_arr[start_idx][:3] + np.array([*initial_ego_state.center])))
         #print("Origin",pred_states[time][:3],asil_traj[time])
         #origin = StateSE2(*frame.ego_status.ego_pose)
         map_object_dict = self.scene.map_api.get_proximal_map_objects(

@@ -140,11 +140,8 @@ class PPO():
                 wrapper = self.env.envs[i]
                 env_id = wrapper.gym_env._ev_id
                 ego_vehicle = wrapper.env._ev_handler.ego_vehicles[env_id]
-                if len(ego_vehicle.trajectory) >= 2:
-                    second_last = ego_vehicle.trajectory[-2]
-                else:
-                    second_last = np.array([0,0,0])
                 token = ego_vehicle.token
+                second_last = ego_vehicle.trajectory[-2]
                 last = ego_vehicle.trajectory[-1]
                 poses = last - second_last
                 point = Point2D(poses[0],poses[1])
