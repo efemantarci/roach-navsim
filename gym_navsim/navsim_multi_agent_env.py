@@ -14,9 +14,7 @@ from navsim.common.dataclasses import SceneFilter, SensorConfig
 from navsim.visualization.plots import plot_bev_frame
 from .core.obs_manager.obs_manager_handler import ObsManagerHandler
 from .core.task_actor.ego_vehicle.ego_vehicle_handler import EgoVehicleHandler
-from .core.ego_vehicle import EgoVehicle
 from omegaconf import OmegaConf
-import time
 import hydra
 
 logger = logging.getLogger(__name__)
@@ -63,8 +61,8 @@ class NavsimEnv(gym.Env):
         self.scene = self.scene_loader.get_scene_from_token(token)
     def reset(self):
         self.time = 0
-        #new_token = np.random.choice(self.scene_loader.tokens)
-        new_token = "4a6ab6e35934543a"
+        new_token = np.random.choice(self.scene_loader.tokens)
+        #new_token = "4a6ab6e35934543a"
         self._initialize_scene(new_token)
         self._ev_handler.reset(self._obs_configs,self.scene)
         logger.debug("_ev_handler reset done!!")

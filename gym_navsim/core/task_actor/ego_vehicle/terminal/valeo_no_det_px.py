@@ -134,8 +134,14 @@ class ValeoNoDetPx(object):
             'debug_texts': debug_texts
         }
         """
+        debug_texts = [
+            f'ev: yazmadim :D',
+            f'c_px: bu da yok',
+            f"latd: bu hic yok"
+            f"ovye"
+        ]
         done |= finished
-        terminal_debug = {"exploration_suggest": exploration_suggest, "debug_texts": "yok"}
+        terminal_debug = {"exploration_suggest": exploration_suggest, "debug_texts": debug_texts}
         #return done, timeout, terminal_reward, terminal_debug
         return done, finished, terminal_reward, terminal_debug # Isn't finishing a good thing??
     def rotate(self, points, angle):

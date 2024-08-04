@@ -132,16 +132,24 @@ class PPO():
                 env_id = wrapper.gym_env._ev_id
                 ego_vehicle = wrapper.env._ev_handler.ego_vehicles[env_id]
                 token = ego_vehicle.token
-                img = wrapper._render_dict["prev_im_render"]
-                for i,text in enumerate(infos[idx]["reward_debug"]["debug_texts"]):
+
+                crash_img = wrapper._render_dict["prev_im_render"]
+                img = cv2.cvtColor(wrapper._render_dict["im_render"],cv2.COLOR_BGR2RGB)
+                cv2.putText(img,f"Rewards: {rewards}",(10,10),cv2.FONT_HERSHEY_SIMPLEX,0.3,(255,0,0),1)
+                for i,text in enumerate(infos[0]["reward_debug"]["debug_texts"]):
                     cv2.putText(img,text,(10,20+i*10),cv2.FONT_HERSHEY_SIMPLEX,0.3,(255,0,0),1)
+                #cv2.circle(img, (y2,x2), 5, (0, 0, 255), 5)
                 cv2.imwrite(f"rollout_{idx}_{index}_{n_steps}_{token}.png",img)
-            for i in np.where(~dones)[0]:
-                wrapper = self.env.envs[i]
+                cv2.imwrite(f"rollout_{idx}_{index}_{n_steps}_{token}_crash.png",crash_img)
+            for idx in np.where(~dones)[0]:
+                wrapper = self.env.envs[idx]
                 env_id = wrapper.gym_env._ev_id
                 ego_vehicle = wrapper.env._ev_handler.ego_vehicles[env_id]
                 token = ego_vehicle.token
-                second_last = ego_vehicle.trajectory[-2]
+                if len(ego_vehicle.trajectory) >= 2:
+                    second_last = ego_vehicle.trajectory[-2]
+                else:
+                    second_last = np.array([0,0,0])
                 last = ego_vehicle.trajectory[-1]
                 poses = last - second_last
                 point = Point2D(poses[0],poses[1])
@@ -154,14 +162,14 @@ class PPO():
                     )
                 x = int(warped[0][0][0])
                 y = int(warped[0][0][1])
-                img = imgs[i]
+                img = imgs[idx]
                 cv2.putText(img,f"Rewards: {rewards}",(10,10),cv2.FONT_HERSHEY_SIMPLEX,0.3,(255,0,0),1)
                 for i,text in enumerate(infos[0]["reward_debug"]["debug_texts"]):
                     cv2.putText(img,text,(10,20+i*10),cv2.FONT_HERSHEY_SIMPLEX,0.3,(255,0,0),1)
                 cv2.circle(img, (x,y), 5, (0, 0, 255), -1)
-                cv2.arrowedLine(img,(x,y),(warped_line[0][0][0],warped_line[0][0][1]),(0,255,0),2)
+                cv2.arrowedLine(img,(x,y),(int(warped_line[0][0][0]),int(warped_line[0][0][1])),(0,255,0),2)
                 #cv2.circle(img, (y2,x2), 5, (0, 0, 255), 5)
-                cv2.imwrite(f"rollout_{i}_{index}_{n_steps}_{token}.png",img)
+                cv2.imwrite(f"rollout_{idx}_{index}_{n_steps}_{token}.png",img)
             n_steps += 1
             self.num_timesteps += env.num_envs
 
