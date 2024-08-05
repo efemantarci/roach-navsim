@@ -122,11 +122,20 @@ class ObsManager(ObsManagerBase):
                 layers=[SemanticMapLayer.LANE_CONNECTOR],
             )
             # No traffic lights for now
-            """
             for map_object in map_object_dict[SemanticMapLayer.LANE_CONNECTOR]:
                 for idx,state in traffic_lights:
+                    # Nuplan warning burada büyük ihtimal
                     if idx == int(map_object.id):
-                        linestring: LineString = self._geometry_local_coords(map_object.baseline_path.linestring, origin)
+                        polygon: Polygon = self._geometry_local_coords(map_object.polygon, origin)
+                        # Burada da değiştirdim
+                        poligon_coords = np.array([[x,y] for x,y in polygon.exterior.coords])
+                        for i in range(len(polygon.exterior.coords)):
+                            angle_diff = trajectory_arr[start_idx][2] - human_trajectory_arr[start_idx][2]
+                            according_to_human = self.rotate(trajectory_arr[start_idx,:2] - human_trajectory_arr[start_idx,:2],-human_trajectory_arr[start_idx,2])
+                            poligon_coords[i] -= according_to_human
+                            poligon_coords[i] = self.rotate(poligon_coords[i],-angle_diff)
+                        polygon = Polygon(poligon_coords)
+                        """
                         x,y = linestring.xy
                         linestring_coords = np.array([x,y]).T
                         for i in range(len(linestring_coords)):
@@ -141,7 +150,11 @@ class ObsManager(ObsManagerBase):
                                 tl_green.append(linestring)
                             else:
                                 tl_red.append(linestring)
-            """
+                        """
+                        if state:
+                            tl_green.append(polygon)
+                        else:
+                            tl_red.append(polygon)
             # Vehicle and walker bounding boxes
             vehicle_bbox_list = []
             walker_bbox_list = []
@@ -197,9 +210,10 @@ class ObsManager(ObsManagerBase):
         initial_ego_state = self.ego_vehicle.metric_cache.ego_state
         # Hardcodelu şimdilik
         #print("Trajectory :",trajectory_arr)
-        origin = StateSE2(*(trajectory_arr[start_idx][:3] + np.array([*initial_ego_state.center])))
+        # Hatalı ?
+        #origin = StateSE2(*(trajectory_arr[start_idx][:3] + np.array([*initial_ego_state.center])))
         #print("Origin",pred_states[time][:3],asil_traj[time])
-        #origin = StateSE2(*frame.ego_status.ego_pose)
+        origin = StateSE2(*frame.ego_status.ego_pose)
         map_object_dict = self.scene.map_api.get_proximal_map_objects(
             point=origin.point,
             radius=max((64,64)),
@@ -210,11 +224,19 @@ class ObsManager(ObsManagerBase):
             SemanticMapLayer.LANE,
             SemanticMapLayer.INTERSECTION,
         ]
-
         road_mask = np.zeros([self._width, self._width], dtype=np.uint8)
         for layer in road_layers:
             for map_object in map_object_dict[layer]:
                 polygon: Polygon = self._geometry_local_coords(map_object.polygon, origin)
+                # Burada da değiştirdim
+                poligon_coords = np.array([[x,y] for x,y in polygon.exterior.coords])
+                for i in range(len(polygon.exterior.coords)):
+                    xy = np.array([x,y])
+                    angle_diff = trajectory_arr[start_idx][2] - human_trajectory_arr[start_idx][2]
+                    according_to_human = self.rotate(trajectory_arr[start_idx,:2] - human_trajectory_arr[start_idx,:2],-human_trajectory_arr[start_idx,2])
+                    poligon_coords[i] -= according_to_human
+                    poligon_coords[i] = self.rotate(poligon_coords[i],-angle_diff)
+                polygon = Polygon(poligon_coords)
                 self.add_polygon_to_image(road_mask, polygon,M_warp)
         road_mask = road_mask.astype(bool)
 
@@ -222,6 +244,16 @@ class ObsManager(ObsManagerBase):
         for layer in polyline_layers:
             for map_object in map_object_dict[layer]:
                     linestring: LineString = self._geometry_local_coords(map_object.baseline_path.linestring, origin)
+                    # Burada değiştirdim
+                    x,y = linestring.xy
+                    linestring_coords = np.array([x,y]).T
+                    for i in range(len(linestring_coords)):
+                        angle_diff = trajectory_arr[start_idx][2] - human_trajectory_arr[start_idx][2]
+                        according_to_human = self.rotate(trajectory_arr[start_idx,:2] - human_trajectory_arr[start_idx,:2],-human_trajectory_arr[start_idx,2])
+                        linestring_coords[i] -= according_to_human
+                        linestring_coords[i] = self.rotate(linestring_coords[i][:2],-angle_diff)
+                        points = [Point2D(x,y) for x,y in linestring_coords]
+                        linestring = LineString(points)
                     self.add_linestring_to_image(lane_mask_all, linestring,M_warp,thickness=1)
         lane_mask_all = lane_mask_all.astype(bool)
         
@@ -255,10 +287,23 @@ class ObsManager(ObsManagerBase):
         ev_mask_col = self._get_mask_from_actor_list([car_footprint.oriented_box], M_warp,scale=self._scale_mask_col)
         # render
         image = np.zeros([self._width, self._width, 3], dtype=np.uint8)
-        
         image[road_mask] = COLOR_ALUMINIUM_5
         image[route_mask] = COLOR_ALUMINIUM_3
         image[lane_mask_all] = COLOR_MAGENTA
+        # Debug için pdm points 
+        pdm_points = np.array(self.ego_vehicle.route) # Copying it to not make changes in the original
+        for i in range(len(pdm_points)):
+            #angle_diff = trajectory_arr[start_idx][2] - human_trajectory_arr[3][2]
+            #according_to_human = self.rotate(trajectory_arr[start_idx,:2] - human_trajectory_arr[3,:2],-human_trajectory_arr[3,2])
+            #pdm_points[i][:2] -= according_to_human
+            pdm_points[i][:2] -= trajectory_arr[start_idx,:2]
+            pdm_points[i][:2] = self.rotate(pdm_points[i][:2],-trajectory_arr[start_idx,2])
+            #pdm_points[i][:2] = self.rotate(pdm_points[i][:2],-angle_diff)
+        pdm_points = [Point2D(x,y) for x,y in pdm_points[:,:2]]
+        pdm_in_pixel = np.array([[self._world_to_pixel(x)[::-1]] for x in pdm_points])
+        pdm_warped = cv.transform(pdm_in_pixel, M_warp)
+        for point in pdm_warped:
+            cv.circle(image, tuple(map(int,point[0])), 3, (0,255,0), -1)
         """
         image[lane_mask_broken] = COLOR_MAGENTA_2
         """
@@ -328,7 +373,8 @@ class ObsManager(ObsManagerBase):
     def _get_mask_from_stopline_vtx(self, stopline_vtx, M_warp):
         mask = np.zeros([self._width, self._width], dtype=np.uint8)
         for linestring in stopline_vtx:
-                self.add_linestring_to_image(mask, linestring,M_warp,thickness=1)
+                self.add_polygon_to_image(mask, linestring,M_warp)
+                #self.add_linestring_to_image(mask, linestring,M_warp,thickness=1)
                 """
                 xs,ys = linestring.xy
                 points = [Point2D(x,y) for x,y in zip(xs,ys)]

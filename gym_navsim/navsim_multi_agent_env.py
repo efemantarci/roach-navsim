@@ -62,7 +62,7 @@ class NavsimEnv(gym.Env):
     def reset(self):
         self.time = 0
         new_token = np.random.choice(self.scene_loader.tokens)
-        #new_token = "4a6ab6e35934543a"
+        #new_token = "c5ff90667143574a"
         self._initialize_scene(new_token)
         self._ev_handler.reset(self._obs_configs,self.scene)
         logger.debug("_ev_handler reset done!!")

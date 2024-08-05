@@ -20,8 +20,11 @@ class EgoVehicle:
         pdm_trajectory = self.metric_cache.trajectory
         future_sampling = TrajectorySampling(num_poses=8,interval_length=0.5)
         pdm_states = get_trajectory_as_array(pdm_trajectory, future_sampling, initial_ego_state.time_point)[:,:3]
-        pdm_states -= np.array([*initial_ego_state.center])
-        pdm_states[:,:2] = self.rotate(pdm_states[:,:2],-initial_ego_state.center.heading)
+        # 3 is hard coded for now
+        #origin = np.array([*self.scene.frames[3].ego_status.ego_pose])
+        origin = np.array([*initial_ego_state.center])
+        pdm_states -= pdm_states[0]
+        pdm_states[:,:2] = self.rotate(pdm_states[:,:2],-origin[2])
         
         self.route = pdm_states
         self.token = scene.scene_metadata.initial_token

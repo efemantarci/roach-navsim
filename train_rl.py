@@ -73,7 +73,6 @@ def main(cfg: DictConfig):
     
     agent.learn(env, total_timesteps=int(cfg.total_timesteps), callback=callback, seed=cfg.seed)
     #server_manager.stop()
-
 if __name__ == '__main__':
     main()
     log.info("train_rl.py DONE!")
