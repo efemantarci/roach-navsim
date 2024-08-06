@@ -144,6 +144,38 @@ class ObsManager(ObsManagerBase):
             # Vehicle and walker bounding boxes
             vehicle_bbox_list = []
             walker_bbox_list = []
+            boxes = frame.annotations.boxes
+            names = frame.annotations.names
+
+            is_vehicle = names == "vehicle"
+            is_pedestrian = names == "pedestrian"
+
+            # Extract required data from boxes
+            x = boxes[:, BoundingBoxIndex.X]
+            y = boxes[:, BoundingBoxIndex.Y]
+            headings = boxes[:, BoundingBoxIndex.HEADING]
+            box_length = boxes[:, 3]
+            box_width = boxes[:, 4]
+            box_height = boxes[:, 5]
+
+            # Calculate angle difference
+            angle_diff = trajectory_arr[start_idx][2] - human_trajectory_arr[past_idx][2]
+
+            # Calculate agent position according to human
+            agent_according_to_human = self.rotate(trajectory_arr[start_idx, :2] - human_trajectory_arr[past_idx, :2], -human_trajectory_arr[past_idx, 2])
+
+            # Adjust xy coordinates and headings
+            xy = np.stack((x, y), axis=-1) - agent_according_to_human
+            xy = self.rotate(xy, -angle_diff)
+            headings -= angle_diff
+
+            # Create OrientedBoxes
+            agent_boxes = [OrientedBox(StateSE2(xy[i, 0], xy[i, 1], headings[i]), box_length[i], box_width[i], box_height[i]) for i in range(len(boxes))]
+
+            # Filter based on names
+            vehicle_bbox_list = [agent_boxes[i] for i in range(len(agent_boxes)) if is_vehicle[i]]
+            walker_bbox_list = [agent_boxes[i] for i in range(len(agent_boxes)) if is_pedestrian[i]]
+            """
             for i in range(len(frame.annotations.boxes)):
                 box = frame.annotations.boxes[i]
                 x, y, heading = (
@@ -163,6 +195,7 @@ class ObsManager(ObsManagerBase):
                     vehicle_bbox_list.append(agent_box)
                 elif frame.annotations.names[i] == "pedestrian":
                     walker_bbox_list.append(agent_box)
+            """
             """
             tl_green = TrafficLightHandler.get_stopline_vtx(ev_loc, 0)
             tl_yellow = TrafficLightHandler.get_stopline_vtx(ev_loc, 1)

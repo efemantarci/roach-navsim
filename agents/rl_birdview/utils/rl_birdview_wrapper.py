@@ -173,28 +173,6 @@ class RlBirdviewWrapper(gym.Wrapper):
         steer = np.clip(steer, -1, 1)
         # Brake nasıl kullanıcam bilmiyorum
         return (throttle,steer)
-        """
-        #brake = np.clip(brake, 0, 1)
-        #control = carla.VehicleControl(throttle=throttle, steer=steer, brake=brake)
-        
-        #return control
-        # Map val1 and val2 to the ranges
-        x1 = np.interp(action[0], [-1, 1], [-3, 3])
-        y1 = np.interp(action[1], [-1, 1], [-3, 3])
-        h1 = 0 # Looks up for now
-        #h1 = np.arctan2(action[1],action[0])
-        last = [x1,y1,h1]
-        #last = self.env.envs[0].ego_vehicle.scene.get_future_trajectory().poses[-1]
-        """
-        for _ in range(8):
-            first_two_elements = np.random.uniform(-32, 32, 2)
-            last_element = np.random.uniform(-np.pi, np.pi)
-            random_tuple = (*first_two_elements, last_element)
-            control.append(random_tuple)
-        return np.array(control).astype(np.float32)
-        """
-        return np.array([last]).astype(np.float32)
-        """
 
     """
     @staticmethod

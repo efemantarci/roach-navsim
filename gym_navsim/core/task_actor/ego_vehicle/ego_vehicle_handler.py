@@ -43,6 +43,7 @@ class EgoVehicleHandler(object):
 
     def apply_control(self, action_dict):
         for ev_id, action in action_dict.items():
+            """
             throttle = action[0]
             steer = action[1] # -1 left 0 ahead 1 right
             angle = np.arcsin(steer) / 2
@@ -57,6 +58,10 @@ class EgoVehicleHandler(object):
             self.terminal_handlers[ev_id].ego_vehicle.trajectory = new_trajectory
             self.reward_handlers[ev_id].ego_vehicle.trajectory = new_trajectory
             self.ego_vehicles[ev_id].steer = steer
+            """
+            time = self.ego_vehicles[ev_id].time
+            ego_vehicle = self.ego_vehicles[ev_id]
+            self.ego_vehicles[ev_id].trajectory = ego_vehicle.human_trajectory[:time+5]
 
     def tick(self, timestamp):
         reward_dict, done_dict, info_dict = {}, {}, {}
