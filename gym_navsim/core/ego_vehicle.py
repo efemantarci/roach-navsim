@@ -4,6 +4,10 @@ from nuplan.planning.simulation.trajectory.trajectory_sampling import Trajectory
 from navsim.evaluate.pdm_score import transform_trajectory,get_trajectory_as_array
 import numpy as np
 import os
+from shapely import affinity
+from shapely.geometry import Polygon, LineString
+from nuplan.common.actor_state.state_representation import TimePoint
+from gym_navsim.utils.conversion import convert_absolute_to_relative_se2_array
 class EgoVehicle:
     def __init__(self,scene) -> None:
         self.scene = scene
@@ -19,13 +23,9 @@ class EgoVehicle:
         initial_ego_state = self.metric_cache.ego_state
         pdm_trajectory = self.metric_cache.trajectory
         future_sampling = TrajectorySampling(num_poses=8,interval_length=0.5)
+        #pdm_states = get_trajectory_as_array(pdm_trajectory, future_sampling, initial_ego_state.time_point)[:,:3]
         pdm_states = get_trajectory_as_array(pdm_trajectory, future_sampling, initial_ego_state.time_point)[:,:3]
-        # 3 is hard coded for now
-        #origin = np.array([*self.scene.frames[3].ego_status.ego_pose])
-        origin = np.array([*initial_ego_state.center])
-        pdm_states -= pdm_states[0]
-        pdm_states[:,:2] = self.rotate(pdm_states[:,:2],-origin[2])
-        
+        pdm_states = convert_absolute_to_relative_se2_array(initial_ego_state.rear_axle,pdm_states)
         self.route = pdm_states
         self.token = scene.scene_metadata.initial_token
         self.pdm_score = {

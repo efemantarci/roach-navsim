@@ -27,8 +27,8 @@ class ValeoAction(object):
         else:
             r_action = 0.0
         self._last_steer = self.ego_vehicle.steer
-
-        rotated_pdm_points = self.convert_relative_trajectories(self.ego_vehicle.route[:,:3],self.ego_vehicle.time - 1,calculate_trajectory,self.ego_vehicle.human_trajectory,3)
+        pdm_route = self.ego_vehicle.route[1:] # I don't include origin for now.
+        rotated_pdm_points = self.convert_relative_trajectories(pdm_route,self.ego_vehicle.time - 1,calculate_trajectory,self.ego_vehicle.human_trajectory,3)
         d_vec = calculate_trajectory[-1,:2] - rotated_pdm_points[self.ego_vehicle.time - 1,:2]
         unit_right = np.array([0,1])
         lateral_distance = np.abs(np.dot(d_vec,unit_right))
@@ -41,9 +41,9 @@ class ValeoAction(object):
         start_idx = self.scene.scene_metadata.num_history_frames + self.ego_vehicle.time - 1 - 1 # -1 comes because we are rewarding previous frame
         hazard_vehicle_loc = self.lbc_hazard_vehicle(self.scene.frames[start_idx],proximity_threshold=9.5)
         if hazard_vehicle_loc is not None:
-            print("Hazard vehicle detected",hazard_vehicle_loc)
             dist_veh = max(0.0, np.linalg.norm(hazard_vehicle_loc[0:2])-8.0)
             desired_spd_veh = self._maximum_speed * np.clip(dist_veh, 0.0, 5.0)/5.0
+            print("Hazard vehicle detected",hazard_vehicle_loc,"Desired speed:",desired_spd_veh)
 
         desired_speed = min(desired_spd_veh, self._maximum_speed)
         ev_speed = np.linalg.norm(self.ego_vehicle.velocity)
