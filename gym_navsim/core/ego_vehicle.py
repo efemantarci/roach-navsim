@@ -8,6 +8,8 @@ from shapely import affinity
 from shapely.geometry import Polygon, LineString
 from nuplan.common.actor_state.state_representation import TimePoint
 from gym_navsim.utils.conversion import convert_absolute_to_relative_se2_array
+from nuplan.common.geometry.convert import absolute_to_relative_poses,relative_to_absolute_poses
+from nuplan.common.actor_state.state_representation import StateSE2
 class EgoVehicle:
     def __init__(self,scene) -> None:
         self.scene = scene
@@ -25,8 +27,11 @@ class EgoVehicle:
         future_sampling = TrajectorySampling(num_poses=8,interval_length=0.5)
         #pdm_states = get_trajectory_as_array(pdm_trajectory, future_sampling, initial_ego_state.time_point)[:,:3]
         pdm_states = get_trajectory_as_array(pdm_trajectory, future_sampling, initial_ego_state.time_point)[:,:3]
-        pdm_states = convert_absolute_to_relative_se2_array(initial_ego_state.rear_axle,pdm_states)
-        self.route = pdm_states
+        self.route = convert_absolute_to_relative_se2_array(initial_ego_state.rear_axle,pdm_states)
+        #pdm_se2 = [StateSE2(*x) for x in pdm_states]
+        #pdm_se2 = absolute_to_relative_poses(pdm_se2)
+        #pdm_states = relative_to_absolute_poses(StateSE2(*self.scene.frames[3].ego_status.ego_pose),pdm_se2)
+        self.route_abs = [np.array([*x]) for x in pdm_states]
         self.token = scene.scene_metadata.initial_token
         self.pdm_score = {
             "nac": 1,
