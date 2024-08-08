@@ -11,6 +11,8 @@ from navsim.common.enums import BoundingBoxIndex
 from nuplan.common.geometry.convert import relative_to_absolute_poses
 from nuplan.common.actor_state.state_representation import StateSE2
 from gym_navsim.utils.conversion import convert_absolute_to_relative_se2_array
+from nuplan.common.maps.abstract_map import AbstractMap, SemanticMapLayer
+from shapely import affinity,intersection,Point
 class ValeoAction(object):
 
     def __init__(self, ego_vehicle):
@@ -33,25 +35,38 @@ class ValeoAction(object):
         pdm_route = self.ego_vehicle.route_abs
         abs_traj = relative_to_absolute_poses(StateSE2(*self.scene.frames[3].ego_status.ego_pose),[StateSE2(*x) for x in calculate_trajectory])
         last_traj = abs_traj[-1]
+        """
         d_vec = (np.array([*last_traj]) - np.array([*pdm_route[len(abs_traj)]]))[:2]
         unit_fwd = np.array([np.cos(last_traj.heading),np.sin(last_traj.heading)])
         unit_right = np.array([np.sin(last_traj.heading),-np.cos(last_traj.heading)])
         lateral_distance = np.abs(np.dot(d_vec,unit_right))
-        forw_distance = np.abs(np.dot(d_vec,unit_fwd))
+        """
+        d_vec = np.array([*last_traj]) - np.array([*pdm_route[len(abs_traj)]])
+        lateral_distance = np.abs(np.linalg.norm(d_vec[:2]) * np.sin(d_vec[2]))
+        #lateral_distance = np.abs(last_traj_lat - pdm_traj_lat)
+        #forw_distance = np.abs(np.dot(d_vec,unit_fwd))
         r_position = -1.0 * (lateral_distance / 2.0)
 
-        angle_difference = np.abs(calculate_trajectory[-1,2] - pdm_route[len(abs_traj)][2]) / np.pi
+        angle_difference = np.abs(last_traj.heading - pdm_route[len(abs_traj)][2]) / np.pi
         r_rotation = -1.0 * angle_difference
 
         desired_spd_veh = self._maximum_speed
         start_idx = self.scene.scene_metadata.num_history_frames + self.ego_vehicle.time - 1 - 1 # -1 comes because we are rewarding previous frame
+
         hazard_vehicle_loc = self.lbc_hazard_vehicle(self.scene.frames[start_idx],last_traj,proximity_threshold=9.5)
+        hazard_ped_loc = self.lbc_hazard_walker(self.scene.frames[start_idx],last_traj, proximity_threshold=9.5)
+        traffic_light_dist = self.get_traffic_light(self.scene.frames[start_idx],last_traj)
+
         if hazard_vehicle_loc is not None:
             # -4 Yaptım
             dist_veh = max(0.0, np.linalg.norm(hazard_vehicle_loc[0:2]) -4.0)
             desired_spd_veh = self._maximum_speed * np.clip(dist_veh, 0.0, 5.0)/5.0
             print("Hazard vehicle detected",hazard_vehicle_loc,"Desired speed:",desired_spd_veh)
-
+        if hazard_ped_loc is not None:
+            # Bunu da -6 yerine -3 yaptım
+            dist_ped = max(0.0, np.linalg.norm(hazard_ped_loc[0:2])-3.0)
+            desired_spd_ped = self._maxium_speed * np.clip(dist_ped, 0.0, 5.0)/5.0
+        
         desired_speed = min(desired_spd_veh, self._maximum_speed)
         ev_speed = np.linalg.norm(self.ego_vehicle.velocity)
 
@@ -166,21 +181,22 @@ class ValeoAction(object):
             if same_heading and with_distance_ahead:
                 return convert_absolute_to_relative_se2_array(abs_agent_pos,[abs_box.x,abs_box.y,abs_box.heading])
         return None
-    def lbc_hazard_walker(self,frame,proximity_threshold=9.5,up_angle_th=np.pi/4):
+    def lbc_hazard_walker(self,frame,abs_agent_pos,proximity_threshold=9.5,up_angle_th=np.pi/4):
         for i,name in enumerate(frame.annotations.names):
             if name != "pedestrian":
                 continue
             box = frame.annotations.boxes[i]
-            bbox = (
+            bb = (
                 box[BoundingBoxIndex.X],
                 box[BoundingBoxIndex.Y],
                 box[BoundingBoxIndex.HEADING],
             )
-            x,y,heading = self.convert_relative_trajectories_bb(bbox,self.ego_vehicle.time,self.traj,self.ego_vehicle.human_trajectory)
-            dist = np.linalg.norm(np.array([x,y]))
+            abs_box = relative_to_absolute_poses(StateSE2(*frame.ego_status.ego_pose),[StateSE2(*bb)])[0]
+            dist = np.array([abs_box.x,abs_box.y]) - np.array([abs_agent_pos.x,abs_agent_pos.y]) 
+            # Bu ne demek tam anlayamadım 
             degree = 162 / (np.clip(dist, 1.5, 10.5)+0.3)
-            if self.is_within_distance_ahead(np.array([x,y]), proximity_threshold, up_angle_th=degree):
-                return np.array([x,y])
+            if self.is_within_distance_ahead(dist, proximity_threshold, up_angle_th=degree):
+                return convert_absolute_to_relative_se2_array(abs_agent_pos,[abs_box.x,abs_box.y,abs_box.heading])
         return None
     def rotate(self, points, angle):
         """Rotate points by a given angle."""
@@ -202,3 +218,26 @@ class ValeoAction(object):
             heading -= angle_diff
             res.append(np.array([xy[0],xy[1],heading]))
         return np.array(res)
+    def get_traffic_light(self,frame,abs_agent_pos):
+        traffic_lights = np.array(frame.traffic_lights)
+        if len(traffic_lights) == 0:
+            return None
+        history_origin = StateSE2(*frame.ego_status.ego_pose)
+        map_object_dict = self.scene.map_api.get_proximal_map_objects(
+            point=history_origin.point,
+            radius=max((64,64)),
+            layers=[SemanticMapLayer.LANE_CONNECTOR,SemanticMapLayer.STOP_LINE],
+        )
+        for map_object in map_object_dict[SemanticMapLayer.LANE_CONNECTOR]:
+            idxs = np.where(traffic_lights[:,0] == int(map_object.id))[0]
+            if len(idxs) == 0:
+                continue
+            idx = idxs[0]
+            if not traffic_lights[idx,1]: # Green light
+                continue
+            incoming = map_object.incoming_edges[0]
+            if incoming.contains_point(abs_agent_pos):
+                scaled = affinity.scale(incoming.polygon,xfact=1.05,yfact=1.05,origin="center")
+                shape = intersection(scaled,map_object.polygon)
+                return shape.distance(Point(abs_agent_pos.point))
+        return None

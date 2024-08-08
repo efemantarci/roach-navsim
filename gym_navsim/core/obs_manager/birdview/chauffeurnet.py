@@ -20,6 +20,7 @@ from nuplan.planning.simulation.trajectory.trajectory_sampling import Trajectory
 from navsim.common.dataclasses import Trajectory
 from gym_navsim.utils.conversion import convert_absolute_to_relative_se2_array
 from nuplan.common.geometry.convert import relative_to_absolute_poses
+from shapely import intersection
 COLOR_BLACK = (0, 0, 0)
 COLOR_RED = (255, 0, 0)
 COLOR_GREEN = (0, 255, 0)
@@ -104,7 +105,7 @@ class ObsManager(ObsManagerBase):
             # Traffic lights 
             tl_green = []
             tl_red = []
-            traffic_lights = frame.traffic_lights
+            traffic_lights = np.array(frame.traffic_lights)
             history_origin = StateSE2(*frame.ego_status.ego_pose)
             map_object_dict = self.scene.map_api.get_proximal_map_objects(
                 point=history_origin.point,
@@ -112,12 +113,20 @@ class ObsManager(ObsManagerBase):
                 layers=[SemanticMapLayer.LANE_CONNECTOR,SemanticMapLayer.STOP_LINE],
             )
             for map_object in map_object_dict[SemanticMapLayer.LANE_CONNECTOR]:
-                for idx,state in traffic_lights:
-                    if idx == int(map_object.id):
-                        if state:
-                            tl_green.append(map_object.polygon)
-                        else:
-                            tl_red.append(map_object.polygon)
+                if len(traffic_lights) == 0:
+                    break
+                idxs = np.where(traffic_lights[:,0] == int(map_object.id))[0]
+                if len(idxs) == 0:
+                    continue
+                idx = idxs[0]
+                incoming = map_object.incoming_edges[0]
+                scaled = affinity.scale(incoming.polygon,xfact=1.05,yfact=1.05,origin="center")
+                shape = intersection(scaled,map_object.polygon)
+                if traffic_lights[idx,1]:
+                    tl_red.append(shape)
+                else:
+                    tl_green.append(shape)
+                
             stops = []
             for map_object in map_object_dict[SemanticMapLayer.STOP_LINE]:
                 stops.append(map_object.polygon)
@@ -283,19 +292,14 @@ class ObsManager(ObsManagerBase):
 
     def _get_mask_from_stopline_vtx(self, stopline_vtx, M_warp, origin):
         mask = np.zeros([self._width, self._width], dtype=np.uint8)
-        for polygon in stopline_vtx:
-                polygon: Polygon = self._geometry_local_coords(polygon, origin)
+        for shape in stopline_vtx:
+            if type(shape) == LineString:
+                linestring = self._geometry_local_coords(shape, origin)
+                self.add_linestring_to_image(mask, linestring,M_warp,thickness=3)
+            elif type(shape) == Polygon:
+                polygon= self._geometry_local_coords(shape, origin)
                 self.add_polygon_to_image(mask, polygon, M_warp)
                 #self.add_linestring_to_image(mask, linestring,M_warp,thickness=1)
-                """
-                xs,ys = linestring.xy
-                points = [Point2D(x,y) for x,y in zip(xs,ys)]
-                corners_in_pixel = np.array([[self._world_to_pixel(corner)[::-1]] for corner in points])
-                corners_warped = cv.transform(corners_in_pixel.round(), M_warp)
-                # Adding a huge circle
-                cv.circle(mask, tuple(map(int, corners_warped[0, 0])), 8, 1, -1)
-                """
-            
         return mask.astype(bool)
 
     def _get_mask_from_actor_list(self, actor_list, M_warp, origin, scale=1,globalcoords=True):
