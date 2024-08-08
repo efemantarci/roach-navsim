@@ -105,70 +105,22 @@ class ObsManager(ObsManagerBase):
             tl_green = []
             tl_red = []
             traffic_lights = frame.traffic_lights
-            origin = relative_to_absolute_poses(StateSE2(*start_coords),[StateSE2(*trajectory_arr[past_idx])])[0]
+            history_origin = StateSE2(*frame.ego_status.ego_pose)
             map_object_dict = self.scene.map_api.get_proximal_map_objects(
-                point=origin.point,
+                point=history_origin.point,
                 radius=max((64,64)),
-                layers=[SemanticMapLayer.LANE_CONNECTOR],
+                layers=[SemanticMapLayer.LANE_CONNECTOR,SemanticMapLayer.STOP_LINE],
             )
-            # No traffic lights for now
-            """
             for map_object in map_object_dict[SemanticMapLayer.LANE_CONNECTOR]:
                 for idx,state in traffic_lights:
-                    # Nuplan warning burada büyük ihtimal
                     if idx == int(map_object.id):
-                        polygon: Polygon = self._geometry_local_coords(map_object.polygon, origin)
-                        # Burada da değiştirdim
-                        polygon_x,polygon_y = polygon.exterior.coords.xy
-                        poligon_coords = np.array([polygon_x,polygon_y]).T
-                        for i in range(len(polygon.exterior.coords)):
-                            angle_diff = trajectory_arr[start_idx][2] - human_trajectory_arr[past_idx][2]
-                            according_to_human = self.rotate(trajectory_arr[start_idx,:2] - human_trajectory_arr[past_idx,:2],-human_trajectory_arr[past_idx,2])
-                            poligon_coords[i] -= according_to_human
-                            poligon_coords[i] = self.rotate(poligon_coords[i],-angle_diff)
-                        polygon = Polygon(poligon_coords)
                         if state:
-                            tl_green.append(polygon)
+                            tl_green.append(map_object.polygon)
                         else:
-                            tl_red.append(polygon)
-            """
-            """                  
-            # Vehicle and walker bounding boxes
-            vehicle_bbox_list = []
-            walker_bbox_list = []
-            boxes = frame.annotations.boxes
-            names = frame.annotations.names
-
-            is_vehicle = names == "vehicle"
-            is_pedestrian = names == "pedestrian"
-
-            # Extract required data from boxes
-            x = boxes[:, BoundingBoxIndex.X]
-            y = boxes[:, BoundingBoxIndex.Y]
-            headings = boxes[:, BoundingBoxIndex.HEADING]
-            box_length = boxes[:, 3]
-            box_width = boxes[:, 4]
-            box_height = boxes[:, 5]
-
-            # Calculate angle difference
-            angle_diff = trajectory_arr[start_idx][2] - human_trajectory_arr[past_idx][2]
-
-            # Calculate agent position according to human
-            agent_according_to_human = self.rotate(trajectory_arr[start_idx, :2] - human_trajectory_arr[past_idx, :2], -human_trajectory_arr[past_idx, 2])
-
-            # Adjust xy coordinates and headings
-            xy = np.stack((x, y), axis=-1) - agent_according_to_human
-            xy = self.rotate(xy, -angle_diff)
-            headings -= angle_diff
-
-            # Create OrientedBoxes
-            agent_boxes = [OrientedBox(StateSE2(xy[i, 0], xy[i, 1], headings[i]), box_length[i], box_width[i], box_height[i]) for i in range(len(boxes))]
-
-            # Filter based on names
-            vehicle_bbox_list = [agent_boxes[i] for i in range(len(agent_boxes)) if is_vehicle[i]]
-            walker_bbox_list = [agent_boxes[i] for i in range(len(agent_boxes)) if is_pedestrian[i]]
-
-            """
+                            tl_red.append(map_object.polygon)
+            stops = []
+            for map_object in map_object_dict[SemanticMapLayer.STOP_LINE]:
+                stops.append(map_object.polygon)
             vehicle_bbox_list = []
             walker_bbox_list = []
             for i in range(len(frame.annotations.boxes)):
@@ -179,7 +131,7 @@ class ObsManager(ObsManagerBase):
                     box[BoundingBoxIndex.HEADING],
                 )
                 box_length, box_width, box_height = box[3], box[4], box[5]
-                abs_se2 = relative_to_absolute_poses(StateSE2(*frame.ego_status.ego_pose),[StateSE2(x,y,heading)])[0]
+                abs_se2 = relative_to_absolute_poses(history_origin,[StateSE2(x,y,heading)])[0]
                 agent_box = OrientedBox(abs_se2, box_length, box_width, box_height)
                 if frame.annotations.names[i] == "vehicle":
                     vehicle_bbox_list.append(agent_box)
@@ -191,11 +143,11 @@ class ObsManager(ObsManagerBase):
             tl_red = TrafficLightHandler.get_stopline_vtx(ev_loc, 2)
             stops = self._get_stops(self._parent_actor.criteria_stop)
             """
-            self._history_queue.append((vehicle_bbox_list, walker_bbox_list, tl_green, [], tl_red, []))
+            self._history_queue.append((vehicle_bbox_list, walker_bbox_list, tl_green, [], tl_red, stops))
         #self._history_queue.append((vehicles, walkers, tl_green, tl_yellow, tl_red, stops))
 
         M_warp = self._get_warp_transform(ev_loc, ev_rot)
-
+        origin = relative_to_absolute_poses(StateSE2(*start_coords),[StateSE2(*trajectory_arr[start_idx])])[0]
         # objects with history
         vehicle_masks, walker_masks, tl_green_masks, tl_yellow_masks, tl_red_masks, stop_masks \
             = self._get_history_masks(M_warp,origin)
@@ -215,14 +167,7 @@ class ObsManager(ObsManagerBase):
             SemanticMapLayer.LANE_CONNECTOR,
         ]
         frame = self.scene.frames[start_idx]
-        initial_ego_state = self.ego_vehicle.metric_cache.ego_state
-        # Hardcodelu şimdilik
-        #print("Trajectory :",trajectory_arr)
-        # Hatalı ?
-        #origin = StateSE2(*(trajectory_arr[start_idx][:3] + np.array([*initial_ego_state.center])))
-        #print("Origin",pred_states[time][:3],asil_traj[time])
-        #origin = StateSE2(*frame.ego_status.ego_pose)
-        origin = relative_to_absolute_poses(StateSE2(*start_coords),[StateSE2(*trajectory_arr[start_idx])])[0]
+        
         map_object_dict = self.scene.map_api.get_proximal_map_objects(
             point=origin.point,
             radius=max((64,64)),
@@ -328,17 +273,18 @@ class ObsManager(ObsManagerBase):
         for idx in self._history_idx:
             idx += len(self._history_queue) - 1
             vehicles, walkers, tl_green, tl_yellow, tl_red, stops = self._history_queue[idx]
-            vehicle_masks.append(self._get_mask_from_actor_list(vehicles, M_warp, origin,globalcoords=True))
-            walker_masks.append(self._get_mask_from_actor_list(walkers, M_warp, origin,globalcoords=True))
-            tl_green_masks.append(self._get_mask_from_stopline_vtx(tl_green, M_warp))
-            tl_yellow_masks.append(self._get_mask_from_stopline_vtx(tl_yellow, M_warp))
-            tl_red_masks.append(self._get_mask_from_stopline_vtx(tl_red, M_warp))
-            stop_masks.append(self._get_mask_from_actor_list(stops, M_warp, origin))
+            vehicle_masks.append(self._get_mask_from_actor_list(vehicles, M_warp, origin))
+            walker_masks.append(self._get_mask_from_actor_list(walkers, M_warp, origin))
+            tl_green_masks.append(self._get_mask_from_stopline_vtx(tl_green, M_warp, origin))
+            tl_yellow_masks.append(self._get_mask_from_stopline_vtx(tl_yellow, M_warp, origin))
+            tl_red_masks.append(self._get_mask_from_stopline_vtx(tl_red, M_warp, origin))
+            stop_masks.append(self._get_mask_from_stopline_vtx(stops, M_warp, origin))
         return vehicle_masks, walker_masks, tl_green_masks, tl_yellow_masks, tl_red_masks, stop_masks
 
-    def _get_mask_from_stopline_vtx(self, stopline_vtx, M_warp):
+    def _get_mask_from_stopline_vtx(self, stopline_vtx, M_warp, origin):
         mask = np.zeros([self._width, self._width], dtype=np.uint8)
         for polygon in stopline_vtx:
+                polygon: Polygon = self._geometry_local_coords(polygon, origin)
                 self.add_polygon_to_image(mask, polygon, M_warp)
                 #self.add_linestring_to_image(mask, linestring,M_warp,thickness=1)
                 """

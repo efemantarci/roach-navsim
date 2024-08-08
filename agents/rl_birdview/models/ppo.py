@@ -12,6 +12,8 @@ from .ppo_buffer import PpoBuffer
 from PIL import Image
 import cv2
 from nuplan.common.actor_state.state_representation import StateSE2,Point2D
+from nuplan.common.geometry.convert import relative_to_absolute_poses
+from gym_navsim.utils.conversion import convert_absolute_to_relative_se2_array
 
 class PPO():
     def __init__(self, policy, env,
@@ -152,12 +154,17 @@ class PPO():
                     second_last = np.array([0,0,0])
                 last = ego_vehicle.trajectory[-1]
                 poses = last - second_last
-                point = Point2D(poses[0],poses[1])
+                start_origin = StateSE2(*ego_vehicle.scene.frames[3].ego_status.ego_pose)
+                abs_poses = relative_to_absolute_poses(start_origin,[StateSE2(*last)])[0]
+                origin = relative_to_absolute_poses(start_origin,[StateSE2(*ego_vehicle.trajectory[ego_vehicle.time - 2 + 4])])[0]
+                # Dünyanın en çirkin kodu ama olsun
+                rel_poses = convert_absolute_to_relative_se2_array(origin,[*abs_poses])[0]
+                point = Point2D(rel_poses[0],rel_poses[1])
                 warped = cv2.transform(np.array([[self._world_to_pixel(point)[::-1]]]),self.M_warp)
                 warped_line = cv2.transform(
                     np.array(
                         [[self._world_to_pixel(
-                    Point2D(poses[0]+ int(np.cos(poses[2]) * 10),poses[1]+int(np.sin(poses[2]) * 10)))[::-1]
+                    Point2D(rel_poses[0]+ int(np.cos(rel_poses[2]) * 10),rel_poses[1]+int(np.sin(rel_poses[2]) * 10)))[::-1]
                     ]]),self.M_warp
                     )
                 x = int(warped[0][0][0])
