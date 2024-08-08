@@ -35,28 +35,21 @@ class ValeoAction(object):
         pdm_route = self.ego_vehicle.route_abs
         abs_traj = relative_to_absolute_poses(StateSE2(*self.scene.frames[3].ego_status.ego_pose),[StateSE2(*x) for x in calculate_trajectory])
         last_traj = abs_traj[-1]
-        """
-        d_vec = (np.array([*last_traj]) - np.array([*pdm_route[len(abs_traj)]]))[:2]
-        unit_fwd = np.array([np.cos(last_traj.heading),np.sin(last_traj.heading)])
-        unit_right = np.array([np.sin(last_traj.heading),-np.cos(last_traj.heading)])
-        lateral_distance = np.abs(np.dot(d_vec,unit_right))
-        """
+ 
         d_vec = np.array([*last_traj]) - np.array([*pdm_route[len(abs_traj)]])
         lateral_distance = np.abs(np.linalg.norm(d_vec[:2]) * np.sin(d_vec[2]))
-        #lateral_distance = np.abs(last_traj_lat - pdm_traj_lat)
-        #forw_distance = np.abs(np.dot(d_vec,unit_fwd))
         r_position = -1.0 * (lateral_distance / 2.0)
 
         angle_difference = np.abs(last_traj.heading - pdm_route[len(abs_traj)][2]) / np.pi
         r_rotation = -1.0 * angle_difference
 
-        desired_spd_veh = self._maximum_speed
         start_idx = self.scene.scene_metadata.num_history_frames + self.ego_vehicle.time - 1 - 1 # -1 comes because we are rewarding previous frame
 
         hazard_vehicle_loc = self.lbc_hazard_vehicle(self.scene.frames[start_idx],last_traj,proximity_threshold=9.5)
         hazard_ped_loc = self.lbc_hazard_walker(self.scene.frames[start_idx],last_traj, proximity_threshold=9.5)
         traffic_light_dist = self.get_traffic_light(self.scene.frames[start_idx],last_traj)
 
+        desired_spd_veh = desired_spd_ped = desired_spd_rl = self._maximum_speed
         if hazard_vehicle_loc is not None:
             # -4 Yaptım
             dist_veh = max(0.0, np.linalg.norm(hazard_vehicle_loc[0:2]) -4.0)
@@ -65,9 +58,14 @@ class ValeoAction(object):
         if hazard_ped_loc is not None:
             # Bunu da -6 yerine -3 yaptım
             dist_ped = max(0.0, np.linalg.norm(hazard_ped_loc[0:2])-3.0)
-            desired_spd_ped = self._maxium_speed * np.clip(dist_ped, 0.0, 5.0)/5.0
+            desired_spd_ped = self._maximum_speed * np.clip(dist_ped, 0.0, 5.0)/5.0
+            print("Hazard pedestrian detected",hazard_vehicle_loc,"Desired speed:",desired_spd_veh)
+        if traffic_light_dist is not None:
+            dist_rl = max(0.0, traffic_light_dist-5.0)
+            desired_spd_rl = self._maximum_speed * np.clip(dist_rl, 0.0, 5.0)/5.0
+            print("Red light detected",hazard_vehicle_loc,"Desired speed:",desired_spd_veh)
         
-        desired_speed = min(desired_spd_veh, self._maximum_speed)
+        desired_speed = min(self._maximum_speed, desired_spd_veh, desired_spd_ped, desired_spd_rl)
         ev_speed = np.linalg.norm(self.ego_vehicle.velocity)
 
         r_speed = 1.0 - np.abs(ev_speed - desired_speed) / self._maximum_speed
@@ -88,7 +86,8 @@ class ValeoAction(object):
         calculate_len = len(self.traj)
         initial_ego_state = self.metric_cache.ego_state
         pred_trajectory = transform_trajectory(self._convert_to_trajectory(self.traj),initial_ego_state)
-        pdm_trajectory = self.metric_cache.trajectory
+        #pdm_trajectory = self.metric_cache.trajectory
+        pdm_trajectory = transform_trajectory(self._convert_to_trajectory(self.ego_vehicle.route),initial_ego_state)
         future_sampling = TrajectorySampling(num_poses=5 * calculate_len,interval_length=0.1)
         pdm_states, pred_states = (
                 get_trajectory_as_array(pdm_trajectory, future_sampling, initial_ego_state.time_point),
@@ -154,7 +153,7 @@ class ValeoAction(object):
         heading -= angle_diff
         return xy[0],xy[1],heading
     def is_within_distance_ahead(self,target_location, max_distance, up_angle_th=60):
-        distance = np.linalg.norm(target_location[0:2])
+        distance = np.linalg.norm(target_location[:2])
         if distance < 0.001:
             return True
         if distance > max_distance:
@@ -194,7 +193,7 @@ class ValeoAction(object):
             abs_box = relative_to_absolute_poses(StateSE2(*frame.ego_status.ego_pose),[StateSE2(*bb)])[0]
             dist = np.array([abs_box.x,abs_box.y]) - np.array([abs_agent_pos.x,abs_agent_pos.y]) 
             # Bu ne demek tam anlayamadım 
-            degree = 162 / (np.clip(dist, 1.5, 10.5)+0.3)
+            degree = 162 / (np.clip(np.linalg.norm(dist), 1.5, 10.5)+0.3)
             if self.is_within_distance_ahead(dist, proximity_threshold, up_angle_th=degree):
                 return convert_absolute_to_relative_se2_array(abs_agent_pos,[abs_box.x,abs_box.y,abs_box.heading])
         return None

@@ -25,12 +25,8 @@ class EgoVehicle:
         initial_ego_state = self.metric_cache.ego_state
         pdm_trajectory = self.metric_cache.trajectory
         future_sampling = TrajectorySampling(num_poses=8,interval_length=0.5)
-        #pdm_states = get_trajectory_as_array(pdm_trajectory, future_sampling, initial_ego_state.time_point)[:,:3]
         pdm_states = get_trajectory_as_array(pdm_trajectory, future_sampling, initial_ego_state.time_point)[:,:3]
         self.route = convert_absolute_to_relative_se2_array(initial_ego_state.rear_axle,pdm_states)
-        #pdm_se2 = [StateSE2(*x) for x in pdm_states]
-        #pdm_se2 = absolute_to_relative_poses(pdm_se2)
-        #pdm_states = relative_to_absolute_poses(StateSE2(*self.scene.frames[3].ego_status.ego_pose),pdm_se2)
         self.route_abs = [np.array([*x]) for x in pdm_states]
         self.token = scene.scene_metadata.initial_token
         self.pdm_score = {

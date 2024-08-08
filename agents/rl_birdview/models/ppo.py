@@ -142,7 +142,7 @@ class PPO():
                     cv2.putText(img,text,(10,20+i*10),cv2.FONT_HERSHEY_SIMPLEX,0.3,(255,0,0),1)
                 #cv2.circle(img, (y2,x2), 5, (0, 0, 255), 5)
                 cv2.imwrite(f"rollout_{idx}_{index}_{n_steps}_{token}.png",img)
-                cv2.imwrite(f"rollout_{idx}_{index}_{n_steps}_{token}_crash.png",crash_img)
+                cv2.imwrite(f"rollout_{idx}_{index}_{n_steps}!_{token}.png",crash_img)
             for idx in np.where(~dones)[0]:
                 wrapper = self.env.envs[idx]
                 env_id = wrapper.gym_env._ev_id
