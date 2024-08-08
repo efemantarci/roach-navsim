@@ -24,10 +24,11 @@ class EgoVehicle:
         # Route info
         initial_ego_state = self.metric_cache.ego_state
         pdm_trajectory = self.metric_cache.trajectory
-        future_sampling = TrajectorySampling(num_poses=8,interval_length=0.5)
-        pdm_states = get_trajectory_as_array(pdm_trajectory, future_sampling, initial_ego_state.time_point)[:,:3]
-        self.route = convert_absolute_to_relative_se2_array(initial_ego_state.rear_axle,pdm_states)
-        self.route_abs = [np.array([*x]) for x in pdm_states]
+        start_time = pdm_trajectory.start_time.time_us
+        times = [TimePoint(time) for time in np.linspace(start_time,start_time + 8 * 0.5 * 1e6,9)]
+        pdm_states = pdm_trajectory.get_state_at_times(times)
+        self.route = convert_absolute_to_relative_se2_array(initial_ego_state.rear_axle, np.array([[*se2.center] for se2 in pdm_states]))[1:]
+        self.route_abs = np.array([[*se2.center] for se2 in pdm_states])
         self.token = scene.scene_metadata.initial_token
         self.pdm_score = {
             "nac": 1,

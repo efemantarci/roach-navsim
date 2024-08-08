@@ -36,11 +36,14 @@ class ValeoAction(object):
         abs_traj = relative_to_absolute_poses(StateSE2(*self.scene.frames[3].ego_status.ego_pose),[StateSE2(*x) for x in calculate_trajectory])
         last_traj = abs_traj[-1]
  
-        d_vec = np.array([*last_traj]) - np.array([*pdm_route[len(abs_traj)]])
+        d_vec = np.array([*last_traj]) - np.array([*pdm_route[len(abs_traj) - 1]])
         lateral_distance = np.abs(np.linalg.norm(d_vec[:2]) * np.sin(d_vec[2]))
-        r_position = -1.0 * (lateral_distance / 2.0)
+        if self.ego_vehicle.pdm_score["ep"] > 0.9 and self.ego_vehicle.time > 1:
+            r_position = 0.0
+        else:
+            r_position = -1.0 * (lateral_distance / 2.0)
 
-        angle_difference = np.abs(last_traj.heading - pdm_route[len(abs_traj)][2]) / np.pi
+        angle_difference = np.abs(last_traj.heading - pdm_route[len(abs_traj) - 1][2]) / np.pi
         r_rotation = -1.0 * angle_difference
 
         start_idx = self.scene.scene_metadata.num_history_frames + self.ego_vehicle.time - 1 - 1 # -1 comes because we are rewarding previous frame
