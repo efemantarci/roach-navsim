@@ -47,12 +47,10 @@ class RlBirdviewWrapper(gym.Wrapper):
             for ev_id in self.env._ev_handler._terminal_configs:
                 self.env._ev_handler._terminal_configs[ev_id]['kwargs']['eval_mode'] = True
             self.env.switch_scene_loader("test")
-            print("Teste geçiyom")
         else:
             for ev_id in self.env._ev_handler._terminal_configs:
                 self.env._ev_handler._terminal_configs[ev_id]['kwargs']['eval_mode'] = False
             self.env.switch_scene_loader("trainval")
-            print("Traine geçiyom")
 
         self.obs_ma = self.env.reset()
         

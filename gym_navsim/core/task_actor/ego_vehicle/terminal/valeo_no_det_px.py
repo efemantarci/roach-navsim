@@ -83,8 +83,6 @@ class ValeoNoDetPx(object):
         crash = self.ego_vehicle.pdm_score["nac"] < 0.5
         infraction = self.ego_vehicle.pdm_score["dac"] < 0.5
         done = c_collision_px or crash or infraction or c_lat_dist or c_outside_road or c_run_rl
-        if infraction:
-            print(f"infraction {timestamp}",infraction)
         # terminal reward
         terminal_reward = 0.0
         if done:
