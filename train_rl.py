@@ -17,11 +17,6 @@ log = logging.getLogger(__name__)
 #warnings.filterwarnings("error")
 @hydra.main(config_path='config', config_name='train_rl')
 def main(cfg: DictConfig):
-    """
-    # start carla servers
-    server_manager = server_utils.CarlaServerManager(cfg.carla_sh_path, configs=cfg.train_envs)
-    server_manager.start()
-    """
     # prepare agent
     agent_name = cfg.actors[cfg.ev_id].agent
 
@@ -47,22 +42,16 @@ def main(cfg: DictConfig):
     wrapper_kargs = cfg_agent.env_wrapper.kwargs
 
     def env_maker(config):
-        env = gym.make(config['env_id'],token=cfg.token, obs_configs=obs_configs, reward_configs=reward_configs,
+        env = gym.make(config['env_id'],token=cfg.token,split=cfg.split, obs_configs=obs_configs, reward_configs=reward_configs,
                        terminal_configs=terminal_configs,**config['env_configs'])
         env = EnvWrapper(env, **wrapper_kargs)
         return env
-    """
-    if cfg.dummy or len(server_manager.env_configs) == 1:
-        env = DummyVecEnv([lambda config=config: env_maker(config) for config in server_manager.env_configs])
-    else:
-        env = SubprocVecEnv([lambda config=config: env_maker(config) for config in server_manager.env_configs])
-    """
     envs = OmegaConf.to_container(cfg.train_envs)["envs"]
     if cfg.dummy:
         env = DummyVecEnv([lambda config=config: env_maker(config) for config in envs])
     else:
         env = SubprocVecEnv([lambda config=config: env_maker(config) for config in envs])
-    env.render_mode = "human"
+    env.render_mode = "rgb_array"
     # wandb init
     wb_callback = WandbCallback(cfg, env)
     callback = CallbackList([wb_callback])

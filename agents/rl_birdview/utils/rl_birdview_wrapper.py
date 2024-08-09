@@ -85,7 +85,7 @@ class RlBirdviewWrapper(gym.Wrapper):
         }
         return obs, reward, done, info
 
-    def render(self, mode='human'):
+    def render(self, mode='rgb_array'):
         '''
         train render: used in train_rl.py
         '''
@@ -173,26 +173,3 @@ class RlBirdviewWrapper(gym.Wrapper):
         steer = np.clip(steer, -1, 1)
         # Brake nasıl kullanıcam bilmiyorum
         return (throttle,steer)
-
-    """
-    @staticmethod
-    def process_act(action, acc_as_action, train=True):
-        if not train:
-            action = action[0]
-        if acc_as_action:
-            acc, steer = action.astype(np.float64)
-            if acc >= 0.0:
-                throttle = acc
-                brake = 0.0
-            else:
-                throttle = 0.0
-                brake = np.abs(acc)
-        else:
-            throttle, steer, brake = action.astype(np.float64)
-
-        throttle = np.clip(throttle, 0, 1)
-        steer = np.clip(steer, -1, 1)
-        brake = np.clip(brake, 0, 1)
-        control = carla.VehicleControl(throttle=throttle, steer=steer, brake=brake)
-        return control
-    """

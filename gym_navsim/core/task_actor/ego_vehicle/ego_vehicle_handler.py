@@ -11,9 +11,9 @@ class EgoVehicleHandler(object):
         self._reward_configs = reward_configs
         self._terminal_configs = terminal_configs
     # Task config yerine obs config vericem. Zaten sadece env_id yi kullanıyoruz
-    def reset(self, obs_config,scene):
+    def reset(self, obs_config,scene,split):
         for ev_id in obs_config:
-            self.ego_vehicles[ev_id] = EgoVehicle(scene)
+            self.ego_vehicles[ev_id] = EgoVehicle(scene,split)
 
             self.reward_handlers[ev_id] = self._build_instance(
                 self._reward_configs[ev_id], self.ego_vehicles[ev_id])
@@ -43,7 +43,6 @@ class EgoVehicleHandler(object):
 
     def apply_control(self, action_dict):
         for ev_id, action in action_dict.items():
-            """
             throttle = action[0]
             steer = action[1] # -1 left 0 ahead 1 right
             angle = np.arcsin(steer) / 2
@@ -58,10 +57,6 @@ class EgoVehicleHandler(object):
             self.terminal_handlers[ev_id].ego_vehicle.trajectory = new_trajectory
             self.reward_handlers[ev_id].ego_vehicle.trajectory = new_trajectory
             self.ego_vehicles[ev_id].steer = steer
-            """
-            time = self.ego_vehicles[ev_id].time
-            ego_vehicle = self.ego_vehicles[ev_id]
-            self.ego_vehicles[ev_id].trajectory = ego_vehicle.human_trajectory[:time+5]
 
     def tick(self, timestamp):
         reward_dict, done_dict, info_dict = {}, {}, {}

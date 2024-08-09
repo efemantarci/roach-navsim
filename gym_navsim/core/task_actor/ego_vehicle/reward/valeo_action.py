@@ -57,16 +57,17 @@ class ValeoAction(object):
             # -4 Yaptım
             dist_veh = max(0.0, np.linalg.norm(hazard_vehicle_loc[0:2]) -4.0)
             desired_spd_veh = self._maximum_speed * np.clip(dist_veh, 0.0, 5.0)/5.0
-            print("Hazard vehicle detected",hazard_vehicle_loc,"Desired speed:",desired_spd_veh)
+            #print("Hazard vehicle detected",hazard_vehicle_loc,"Desired speed:",desired_spd_veh)
         if hazard_ped_loc is not None:
             # Bunu da -6 yerine -3 yaptım
             dist_ped = max(0.0, np.linalg.norm(hazard_ped_loc[0:2])-3.0)
             desired_spd_ped = self._maximum_speed * np.clip(dist_ped, 0.0, 5.0)/5.0
-            print("Hazard pedestrian detected",hazard_vehicle_loc,"Desired speed:",desired_spd_veh)
+            #print("Hazard pedestrian detected",hazard_ped_loc,"Desired speed:",desired_spd_ped)
         if traffic_light_dist is not None:
-            dist_rl = max(0.0, traffic_light_dist-5.0)
+            # -2.5 bu da
+            dist_rl = max(0.0, traffic_light_dist-2.5)
             desired_spd_rl = self._maximum_speed * np.clip(dist_rl, 0.0, 5.0)/5.0
-            print("Red light detected",hazard_vehicle_loc,"Desired speed:",desired_spd_veh)
+            #print("Red light detected",desired_spd_rl,"Desired speed:",desired_spd_rl)
         
         desired_speed = min(self._maximum_speed, desired_spd_veh, desired_spd_ped, desired_spd_rl)
         ev_speed = np.linalg.norm(self.ego_vehicle.velocity)

@@ -19,8 +19,9 @@ import hydra
 
 logger = logging.getLogger(__name__)
 class NavsimEnv(gym.Env):
-    def __init__(self,token,obs_configs,reward_configs,terminal_configs,render_mode="human"):
+    def __init__(self,token,split,obs_configs,reward_configs,terminal_configs,render_mode="rgb_array"):
         self.token = token
+        self.split = split
         self.render_mode = render_mode
         self.scene_loader = self._generate_scene_loader()
         self._initialize_scene(token)
@@ -43,9 +44,11 @@ class NavsimEnv(gym.Env):
         """
         self.time = 0
     def _generate_scene_loader(self):
-        
-        SPLIT = "test"
-        FILTER = hydra.utils.get_original_cwd() + "/config/scene_filter/navtest.yaml"
+        SPLIT = self.split
+        if SPLIT == "test":
+            FILTER = hydra.utils.get_original_cwd() + "/config/scene_filter/navtest.yaml"
+        elif SPLIT == "trainval":
+            FILTER = hydra.utils.get_original_cwd() + "/config/scene_filter/navtrain.yaml"
         cfg = OmegaConf.load(FILTER)
         scene_filter = instantiate(cfg)
         openscene_data_root = Path(os.getenv("OPENSCENE_DATA_ROOT"))
@@ -64,7 +67,7 @@ class NavsimEnv(gym.Env):
         new_token = np.random.choice(self.scene_loader.tokens)
         #new_token = "46deeff0d0495df6"
         self._initialize_scene(new_token)
-        self._ev_handler.reset(self._obs_configs,self.scene)
+        self._ev_handler.reset(self._obs_configs,self.scene,self.split)
         logger.debug("_ev_handler reset done!!")
         self._om_handler.reset(self._ev_handler.ego_vehicles)
         logger.debug("_om_handler reset done!!")

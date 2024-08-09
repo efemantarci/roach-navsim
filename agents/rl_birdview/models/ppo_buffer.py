@@ -8,6 +8,10 @@ import time
 from threading import Thread
 import queue
 
+from nuplan.common.actor_state.vehicle_parameters import get_pacifica_parameters
+from nuplan.common.actor_state.car_footprint import CarFootprint
+from nuplan.common.actor_state.state_representation import StateSE2
+
 COLORS = [
     [46, 52, 54],
     [136, 138, 133],
@@ -52,6 +56,11 @@ class PpoBuffer():
             self.device = 'cpu'
 
         self.sample_queue = queue.Queue()
+
+        # Render için
+        self._pixels_per_meter = 1.5
+        self._width = 192
+        self.M_warp = self._get_warp_transform()
 
     def reset(self) -> None:
         self.observations = {}
@@ -208,7 +217,13 @@ class PpoBuffer():
                 im_birdview = np.zeros([h, w, 3], dtype=np.uint8)
                 for idx_c in range(len(vis_idx)):
                     im_birdview[masks[idx_c]] = COLORS[idx_c]
-
+                # ev_mask
+                car_footprint = CarFootprint.build_from_rear_axle(
+                    rear_axle_pose=StateSE2(0, 0, 0),
+                    vehicle_parameters=get_pacifica_parameters(),
+                )
+                ev_mask = self._get_mask_from_actor_list([car_footprint.oriented_box], self.M_warp)
+                im_birdview[ev_mask] = [255, 255, 255]
                 im = np.zeros([h, w*2, 3], dtype=np.uint8)
                 im[:h, :w] = im_birdview
 
@@ -232,7 +247,6 @@ class PpoBuffer():
 
                 for i_txt, txt in enumerate(self.reward_debugs[j][i] + self.terminal_debugs[j][i]):
                     im = cv2.putText(im, txt, (w, (i_txt+1)*15), cv2.FONT_HERSHEY_SIMPLEX, 0.35, (255, 255, 255), 1)
-
                 im_envs.append(im)
 
             big_im = tile_images(im_envs)
@@ -259,3 +273,33 @@ class PpoBuffer():
         if self.full:
             return self.buffer_size
         return self.pos
+    def _get_warp_transform(self):
+        bottom_left = [32,-32]#ev_loc_in_px - self._pixels_ev_to_bottom * forward_vec - (0.5*self._width) * right_vec
+        top_left = [32,32]#ev_loc_in_px + (self._width-self._pixels_ev_to_bottom) * forward_vec - (0.5*self._width) * right_vec
+        top_right = [-32,32]#ev_loc_in_px + (self._width-self._pixels_ev_to_bottom) * forward_vec + (0.5*self._width) * right_vec
+        src_pts = np.stack((bottom_left, top_left, top_right), axis=0).astype(np.float32)
+        dst_pts = np.array([[0, self._width-1],
+                            [0, 0],
+                            [self._width-1, 0]], dtype=np.float32)
+        return cv2.getAffineTransform(src_pts, dst_pts)
+    def _get_mask_from_actor_list(self, actor_list, M_warp, scale=1):
+        mask = np.zeros([self._width, self._width], dtype=np.uint8)
+        for bounding_box in actor_list:
+            corners = bounding_box.all_corners()
+            corners_in_pixel = np.array([[self._world_to_pixel(corner)[::-1] * scale] for corner in corners])
+            corners_warped = cv2.transform(corners_in_pixel, M_warp)
+            hull = cv2.convexHull(np.round(corners_warped).astype(np.int32))
+            if hull.shape[1] != 1:
+                hull = hull.reshape(-1, 1, 2)
+            cv2.fillConvexPoly(mask, hull, 1)
+        return mask.astype(bool)
+    def _world_to_pixel(self, location, projective=False):
+        """Converts the world coordinates to pixel coordinates"""
+        x = self._pixels_per_meter * location.x #(location.x - self._world_offset[0])
+        y = self._pixels_per_meter * location.y #(location.y - self._world_offset[1])
+
+        if projective:
+            p = np.array([x, y, 1], dtype=np.float32)
+        else:
+            p = np.array([x, y], dtype=np.float32)
+        return p

@@ -27,8 +27,10 @@ class WandbCallback(BaseCallback):
 
         self.vec_env = vec_env
 
-        self._eval_step = int(1e5)
-        self._buffer_step = int(1e5)
+        #self._eval_step = int(1e5)
+        #self._buffer_step = int(1e5)
+        self._eval_step = 30
+        self._buffer_step = 30
 
     def _init_callback(self):
         self.n_epoch = 0
@@ -136,7 +138,8 @@ class WandbCallback(BaseCallback):
                       step=self.model.num_timesteps)
 
     @staticmethod
-    def evaluate_policy(env, policy, video_path, min_eval_steps=3000):
+    def evaluate_policy(env, policy, video_path, min_eval_steps=30):
+        # min eval steps 30 şu an
         policy = policy.eval()
         t0 = time.time()
         for i in range(env.num_envs):

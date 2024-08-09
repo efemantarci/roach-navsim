@@ -11,14 +11,18 @@ from gym_navsim.utils.conversion import convert_absolute_to_relative_se2_array
 from nuplan.common.geometry.convert import absolute_to_relative_poses,relative_to_absolute_poses
 from nuplan.common.actor_state.state_representation import StateSE2
 class EgoVehicle:
-    def __init__(self,scene) -> None:
+    def __init__(self,scene,split) -> None:
         self.scene = scene
         self.agent_input = scene.get_agent_input().ego_statuses[-1]
         self.collision_px = False
         # Metric cache
         metadata = self.scene.scene_metadata
         # This will change
-        metric_cache_path = os.path.join(os.environ.get("NAVSIM_EXP_ROOT"),"public_test_metric_cache",metadata.log_name,"unknown",metadata.initial_token,"metric_cache.pkl")
+        if split == "trainval":
+            filename = "public_navtrain_metric_cache"
+        elif split == "test":
+            filename = "public_test_metric_cache"
+        metric_cache_path = os.path.join(os.environ.get("NAVSIM_EXP_ROOT"),filename,metadata.log_name,"unknown",metadata.initial_token,"metric_cache.pkl")
         f = lzma.open(metric_cache_path,"rb")
         self.metric_cache = pickle.load(f)
         # Route info

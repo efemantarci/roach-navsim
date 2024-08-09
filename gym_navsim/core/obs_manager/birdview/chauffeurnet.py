@@ -213,6 +213,7 @@ class ObsManager(ObsManagerBase):
             rear_axle_pose=StateSE2(0, 0, 0),
             vehicle_parameters=get_pacifica_parameters(),
         )
+        #lann
         ev_mask = self._get_mask_from_actor_list([car_footprint.oriented_box], M_warp,origin,globalcoords=False)
         #ev_mask_col = self._get_mask_from_actor_list([car_footprint.oriented_box], M_warp,scale=self._scale_mask_col)
         # render
@@ -319,12 +320,6 @@ class ObsManager(ObsManagerBase):
         return mask.astype(bool)
 
     def _get_warp_transform(self, ev_loc, ev_rot):
-        ev_loc_in_px = self._world_to_pixel(ev_loc)
-        yaw = 0 # ev_rot kullanmıyorum şu anık # np.deg2rad(ev_rot.yaw)
-
-        forward_vec = np.array([np.cos(yaw), np.sin(yaw)])
-        right_vec = np.array([np.cos(yaw + 0.5*np.pi), np.sin(yaw + 0.5*np.pi)])
-
         bottom_left = [32,-32]#ev_loc_in_px - self._pixels_ev_to_bottom * forward_vec - (0.5*self._width) * right_vec
         top_left = [32,32]#ev_loc_in_px + (self._width-self._pixels_ev_to_bottom) * forward_vec - (0.5*self._width) * right_vec
         top_right = [-32,32]#ev_loc_in_px + (self._width-self._pixels_ev_to_bottom) * forward_vec + (0.5*self._width) * right_vec
