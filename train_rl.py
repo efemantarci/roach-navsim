@@ -42,7 +42,7 @@ def main(cfg: DictConfig):
     wrapper_kargs = cfg_agent.env_wrapper.kwargs
 
     def env_maker(config):
-        env = gym.make(config['env_id'],token=cfg.token,split=cfg.split, obs_configs=obs_configs, reward_configs=reward_configs,
+        env = gym.make(config['env_id'],token=cfg.token, obs_configs=obs_configs, reward_configs=reward_configs,
                        terminal_configs=terminal_configs,**config['env_configs'])
         env = EnvWrapper(env, **wrapper_kargs)
         return env

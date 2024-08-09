@@ -120,16 +120,21 @@ class ObsManager(ObsManagerBase):
                     continue
                 idx = idxs[0]
                 incoming = map_object.incoming_edges[0]
-                scaled = affinity.scale(incoming.polygon,xfact=1.05,yfact=1.05,origin="center")
+                scaled = affinity.scale(incoming.polygon,xfact=1.1,yfact=1.1,origin="center")
                 shape = intersection(scaled,map_object.polygon)
+                if shape.area < 1e-3:
+                    continue
                 if traffic_lights[idx,1]:
                     tl_red.append(shape)
                 else:
                     tl_green.append(shape)
                 
             stops = []
+            """
+            They look ugly
             for map_object in map_object_dict[SemanticMapLayer.STOP_LINE]:
                 stops.append(map_object.polygon)
+            """
             vehicle_bbox_list = []
             walker_bbox_list = []
             for i in range(len(frame.annotations.boxes)):
@@ -274,6 +279,8 @@ class ObsManager(ObsManagerBase):
         #self._parent_actor.collision_px = np.any(ev_mask_col & walker_masks[-1])
         self.ego_vehicle.collision_px = np.any(ev_mask & walker_masks[-1])
         self.ego_vehicle.collision_px = np.any(ev_mask & vehicle_masks[-1])
+        self.ego_vehicle.outside_road = not np.any(ev_mask & road_mask)
+        self.ego_vehicle.run_rl = np.any(ev_mask & tl_red_masks[-1])
 
         return obs_dict
 

@@ -19,11 +19,13 @@ import hydra
 
 logger = logging.getLogger(__name__)
 class NavsimEnv(gym.Env):
-    def __init__(self,token,split,obs_configs,reward_configs,terminal_configs,render_mode="rgb_array"):
+    def __init__(self,token,obs_configs,reward_configs,terminal_configs,render_mode="rgb_array"):
         self.token = token
-        self.split = split
         self.render_mode = render_mode
-        self.scene_loader = self._generate_scene_loader()
+        self.split = "trainval"
+        self.train_scene_loader = self._generate_scene_loader("trainval")
+        self.test_scene_loader = self._generate_scene_loader("test")
+        self.scene_loader = self.train_scene_loader
         self._initialize_scene(token)
         self._om_handler = ObsManagerHandler(obs_configs)
         self._ev_handler = EgoVehicleHandler(reward_configs,terminal_configs)
@@ -43,8 +45,8 @@ class NavsimEnv(gym.Env):
             for ego_vehicle_id in obs_configs.keys()})
         """
         self.time = 0
-    def _generate_scene_loader(self):
-        SPLIT = self.split
+    def _generate_scene_loader(self,split):
+        SPLIT = split
         if SPLIT == "test":
             FILTER = hydra.utils.get_original_cwd() + "/config/scene_filter/navtest.yaml"
         elif SPLIT == "trainval":
@@ -65,7 +67,7 @@ class NavsimEnv(gym.Env):
     def reset(self):
         self.time = 0
         new_token = np.random.choice(self.scene_loader.tokens)
-        #new_token = "46deeff0d0495df6"
+        #new_token = "4a6ab6e35934543a" #"46deeff0d0495df6"
         self._initialize_scene(new_token)
         self._ev_handler.reset(self._obs_configs,self.scene,self.split)
         logger.debug("_ev_handler reset done!!")
@@ -87,3 +89,9 @@ class NavsimEnv(gym.Env):
             fig, ax = plot_bev_frame(self.scene, frame_idx)
             plt.show()
         return "rendering"
+    def switch_scene_loader(self,split):
+        self.split = split
+        if split == "trainval":
+            self.scene_loader = self.train_scene_loader
+        elif split == "test":
+            self.scene_loader = self.test_scene_loader

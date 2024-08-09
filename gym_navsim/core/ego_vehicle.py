@@ -15,6 +15,8 @@ class EgoVehicle:
         self.scene = scene
         self.agent_input = scene.get_agent_input().ego_statuses[-1]
         self.collision_px = False
+        self.outside_road = False
+        self.run_rl = False
         # Metric cache
         metadata = self.scene.scene_metadata
         # This will change

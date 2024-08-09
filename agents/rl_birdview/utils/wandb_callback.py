@@ -143,7 +143,7 @@ class WandbCallback(BaseCallback):
         policy = policy.eval()
         t0 = time.time()
         for i in range(env.num_envs):
-            env.set_attr('eval_mode', True, indices=i)
+            env.envs[i].gym_env.eval_mode = True
         obs = env.reset()
 
         list_render = []
@@ -190,7 +190,7 @@ class WandbCallback(BaseCallback):
         avg_ep_stat['time/fps_eval'] = n_step * env.num_envs / duration
 
         for i in range(env.num_envs):
-            env.set_attr('eval_mode', False, indices=i)
+            env.envs[i].gym_env.eval_mode = False
         obs = env.reset()
         return avg_ep_stat, ep_events
 

@@ -1,5 +1,6 @@
 import numpy as np
-
+from nuplan.common.geometry.convert import absolute_to_relative_poses,relative_to_absolute_poses
+from nuplan.common.actor_state.state_representation import StateSE2
 
 class ValeoNoDetPx(object):
     '''
@@ -52,12 +53,13 @@ class ValeoNoDetPx(object):
             c_run_stop = False
         """
          # Done condition 2: lateral distance too large
-        start_idx = self.ego_vehicle.time - 1 # -1 comes because we are rewarding previous frame
-        rotated_pdm_points = self.convert_relative_trajectories(self.ego_vehicle.route[:,:3],start_idx,self.ego_vehicle.trajectory,self.ego_vehicle.human_trajectory,3)
-        waypoint = rotated_pdm_points[self.ego_vehicle.time - 1]
-        d_vec = self.ego_vehicle.trajectory[-1,:2] - waypoint[:2]
-        np_wp_unit_right = np.array([0,1])
-        lat_dist = np.abs(np.dot(np_wp_unit_right, d_vec))
+        calculate_trajectory = self.ego_vehicle.trajectory[4:] # Origin is not included in trajectory
+        self.traj = calculate_trajectory # Şimdilik fonksiyona böyle vericem sonra hallederim
+        pdm_route = self.ego_vehicle.route_abs
+        abs_traj = relative_to_absolute_poses(StateSE2(*self.ego_vehicle.scene.frames[3].ego_status.ego_pose),[StateSE2(*x) for x in calculate_trajectory])
+        last_traj = abs_traj[-1]
+        d_vec = np.array([*last_traj]) - np.array([*pdm_route[len(abs_traj) - 1]])
+        lat_dist = np.abs(np.linalg.norm(d_vec[:2]) * np.sin(d_vec[2]))
 
         if lat_dist - self._last_lat_dist > 0.8:
             thresh_lat_dist = lat_dist + 0.5
@@ -72,18 +74,15 @@ class ValeoNoDetPx(object):
         else:
             c_collision_px = self.ego_vehicle.collision_px
 
-        # endless env: timeout means succeed
-        """
-        if self._eval_mode:
-            timeout = timestamp['relative_simulation_time'] > self._eval_time
-        else:
-            timeout = False
-        """
+        # Done condition 7: outside road
+        c_outside_road = self.ego_vehicle.outside_road
+        c_run_rl = self.ego_vehicle.run_rl
+            
         finished = timestamp > 7
         #done = c_blocked or c_lat_dist or c_run_rl or c_collision or c_run_stop or c_collision_px or timeout
         crash = self.ego_vehicle.pdm_score["nac"] < 0.5
         infraction = self.ego_vehicle.pdm_score["dac"] < 0.5
-        done = c_collision_px or crash or infraction or c_lat_dist
+        done = c_collision_px or crash or infraction or c_lat_dist or c_outside_road or c_run_rl
         if infraction:
             print(f"infraction {timestamp}",infraction)
         # terminal reward
@@ -151,16 +150,3 @@ class ValeoNoDetPx(object):
             [np.sin(angle), np.cos(angle)]
         ])
         return points @ rotation_matrix.T
-    def convert_relative_trajectories(self,points,start_idx,want_arr,real_arr,past_idx=None):
-        if past_idx is None:
-            past_idx = start_idx
-        res = []
-        angle_diff = want_arr[start_idx][2] - real_arr[past_idx][2]
-        agent_according_to_human = self.rotate(want_arr[start_idx,:2] - real_arr[past_idx,:2],-real_arr[past_idx,2])
-        for x,y,heading in points:
-            xy = np.array([x,y])
-            xy -= agent_according_to_human
-            xy = self.rotate(xy,-angle_diff)
-            heading -= angle_diff
-            res.append(xy)
-        return np.array(res)
