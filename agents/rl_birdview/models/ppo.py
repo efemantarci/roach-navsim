@@ -124,6 +124,7 @@ class PPO():
             # update_info_buffer
             for idx in np.where(dones)[0]:
                 self.ep_stat_buffer.append(infos[idx]['episode_stat'])
+                """
                 wrapper = self.env.envs[idx]
                 env_id = wrapper.gym_env._ev_id
                 ego_vehicle = wrapper.env._ev_handler.ego_vehicles[env_id]
@@ -137,6 +138,8 @@ class PPO():
                 #cv2.circle(img, (y2,x2), 5, (0, 0, 255), 5)
                 cv2.imwrite(f"rollout_{idx}_{index}_{n_steps}_{token}.png",img)
                 cv2.imwrite(f"rollout_{idx}_{index}_{n_steps}!_{token}.png",crash_img)
+                """
+            """
             for idx in np.where(~dones)[0]:
                 wrapper = self.env.envs[idx]
                 env_id = wrapper.gym_env._ev_id
@@ -171,6 +174,7 @@ class PPO():
                 cv2.arrowedLine(img,(x,y),(int(warped_line[0][0][0]),int(warped_line[0][0][1])),(0,255,0),2)
                 #cv2.circle(img, (y2,x2), 5, (0, 0, 255), 5)
                 cv2.imwrite(f"rollout_{idx}_{index}_{n_steps}_{token}.png",img)
+            """
             n_steps += 1
             self.num_timesteps += env.num_envs
 

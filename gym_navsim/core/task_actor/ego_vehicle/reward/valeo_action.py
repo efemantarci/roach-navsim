@@ -140,7 +140,8 @@ class ValeoAction(object):
             "ep": ego_progress,
             "ttc": time_to_collision_within_bound,
             "c": comfort,
-            "terminal_reward": terminal_reward
+            "terminal_reward": terminal_reward,
+            "score": score
         }
         self.ego_vehicle.pdm_score = pdm_score
         return reward_debug

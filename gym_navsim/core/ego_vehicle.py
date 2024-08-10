@@ -43,7 +43,8 @@ class EgoVehicle:
             "ep": 1,
             "ttc": 1,
             "c": 1,
-            "terminal_reward": 0
+            "terminal_reward": 0,
+            "score":1
         }
         self.time = 0
         self.steer = 0
