@@ -19,31 +19,30 @@ import hydra
 
 logger = logging.getLogger(__name__)
 class NavsimEnv(gym.Env):
-    def __init__(self,token,obs_configs,reward_configs,terminal_configs,render_mode="rgb_array"):
+    def __init__(self,token,obs_configs,reward_configs,terminal_configs,benchmark=False,render_mode="rgb_array"):
         self.token = token
         self.render_mode = render_mode
-        self.split = "trainval"
-        self.train_scene_loader = self._generate_scene_loader("trainval")
         self.test_scene_loader = self._generate_scene_loader("test")
-        self.scene_loader = self.train_scene_loader
-        self._initialize_scene(token)
-        self._om_handler = ObsManagerHandler(obs_configs)
-        self._ev_handler = EgoVehicleHandler(reward_configs,terminal_configs)
-        self.observation_space = self._om_handler.observation_space
+        self.benchmark = benchmark
+        if not benchmark:
+            self.split = "trainval"
+            self.train_scene_loader = self._generate_scene_loader("trainval")
+            self.scene_loader = self.train_scene_loader
+        else:
+            self.split = "test"
+            self.scene_loader = self.test_scene_loader
+            self.token_idx = 0
+            self.tokens = self.scene_loader.tokens
+        self.initialize_scene(token)
+        self.om_handler = ObsManagerHandler(obs_configs)
+        self.ev_handler = EgoVehicleHandler(reward_configs,terminal_configs)
+        self.observation_space = self.om_handler.observation_space
         self._obs_configs = obs_configs
         self.action_space = gym.spaces.Dict({ego_vehicle_id: gym.spaces.Box(
             low=np.array([0.0, -1.0, 0.0]),
             high=np.array([1.0, 1.0, 1.0]),
             dtype=np.float32)
             for ego_vehicle_id in obs_configs.keys()})
-        """
-        self.action_space = gym.spaces.Dict({ego_vehicle_id: gym.spaces.Tuple(
-            [gym.spaces.Box(
-                low=np.array([-32.0, -32.0, -np.pi]),
-                high=np.array([32.0, 32.0, np.pi]),
-                dtype=np.float32) for _ in range(8)])
-            for ego_vehicle_id in obs_configs.keys()})
-        """
         self.time = 0
     def _generate_scene_loader(self,split):
         SPLIT = split
@@ -62,26 +61,27 @@ class NavsimEnv(gym.Env):
             sensor_config=SensorConfig.build_no_sensors(),
         )
         return self.scene_loader
-    def _initialize_scene(self,token):
+    def initialize_scene(self,token):
         self.scene = self.scene_loader.get_scene_from_token(token)
     def reset(self):
         self.time = 0
-        new_token = np.random.choice(self.scene_loader.tokens)
-        #new_token = "4a6ab6e35934543a" #"46deeff0d0495df6"
-        self._initialize_scene(new_token)
-        self._ev_handler.reset(self._obs_configs,self.scene,self.split)
-        logger.debug("_ev_handler reset done!!")
-        self._om_handler.reset(self._ev_handler.ego_vehicles)
-        logger.debug("_om_handler reset done!!")
-        # Burada environment tick atılmalı
-        obs_dict = self._om_handler.get_observation(self.time)
+        if self.benchmark:
+            new_token = np.random.choice(self.scene_loader.tokens)
+            #new_token = "4a6ab6e35934543a" #"46deeff0d0495df6"
+            self.initialize_scene(new_token)
+        self.ev_handler.reset(self._obs_configs,self.scene,self.split)
+        logger.debug("ev_handler reset done!!")
+        self.om_handler.reset(self.ev_handler.ego_vehicles)
+        logger.debug("om_handler reset done!!")
+        # Burada environment tick aılmalı
+        obs_dict = self.om_handler.get_observation(self.time)
         
         return obs_dict
     def step(self,control_dict):
-        self._ev_handler.apply_control(control_dict)
+        self.ev_handler.apply_control(control_dict)
         self.time += 1
-        obs_dict = self._om_handler.get_observation(self.time)
-        reward_dict, done_dict, info_dict = self._ev_handler.tick(self.time)
+        obs_dict = self.om_handler.get_observation(self.time)
+        reward_dict, done_dict, info_dict = self.ev_handler.tick(self.time)
         return (obs_dict, reward_dict, done_dict, info_dict)
     def render(self):
         if self.render_mode == "human":

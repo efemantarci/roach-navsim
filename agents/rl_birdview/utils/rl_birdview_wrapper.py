@@ -3,12 +3,13 @@ import numpy as np
 import cv2
 
 class RlBirdviewWrapper(gym.Wrapper):
-    def __init__(self, env, input_states=[], acc_as_action=False):
+    def __init__(self, env, benchmark=False,input_states=[], acc_as_action=False):
         assert len(env._obs_configs) == 1
         self._ev_id = list(env._obs_configs.keys())[0]
         self._input_states = input_states
         self._acc_as_action = acc_as_action
         self._render_dict = {}
+        self.eval_mode = benchmark
 
         state_spaces = []   
         if 'speed' in self._input_states:
@@ -40,16 +41,14 @@ class RlBirdviewWrapper(gym.Wrapper):
             env.action_space = gym.spaces.Box(low=np.array([0, -1, 0]), high=np.array([1, 1, 1]), dtype=np.float32)
         super(RlBirdviewWrapper, self).__init__(env)
 
-        self.eval_mode = False
-
     def reset(self):
         if self.eval_mode:
-            for ev_id in self.env._ev_handler._terminal_configs:
-                self.env._ev_handler._terminal_configs[ev_id]['kwargs']['eval_mode'] = True
+            for ev_id in self.env.ev_handler._terminal_configs:
+                self.env.ev_handler._terminal_configs[ev_id]['kwargs']['eval_mode'] = True
             self.env.switch_scene_loader("test")
         else:
-            for ev_id in self.env._ev_handler._terminal_configs:
-                self.env._ev_handler._terminal_configs[ev_id]['kwargs']['eval_mode'] = False
+            for ev_id in self.env.ev_handler._terminal_configs:
+                self.env.ev_handler._terminal_configs[ev_id]['kwargs']['eval_mode'] = False
             self.env.switch_scene_loader("trainval")
 
         self.obs_ma = self.env.reset()
@@ -67,7 +66,8 @@ class RlBirdviewWrapper(gym.Wrapper):
             self._render_dict['prev_im_render'] = self.obs_ma[self._ev_id]['birdview']['rendered']
         #self._render_dict['prev_im_render'] = self.obs_ma[self._ev_id]['birdview']['rendered']
         return obs
-
+    def set_scene(self,token):
+        self.env.initialize_scene(token)
     def step(self, action):
         action_ma = {self._ev_id: self.process_act(action, self._acc_as_action)}
         obs_ma, reward_ma, done_ma, info_ma = self.env.step(action_ma)
@@ -158,8 +158,10 @@ class RlBirdviewWrapper(gym.Wrapper):
         return obs_dict
     @staticmethod
     def process_act(action, acc_as_action, train=True):
+        """
         if not train:
             action = action[0]
+        """
         if acc_as_action:
             acc, steer = action.astype(np.float64)
             if acc >= 0.0:

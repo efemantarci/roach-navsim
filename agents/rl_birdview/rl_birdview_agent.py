@@ -18,7 +18,6 @@ class RlBirdviewAgent():
         cfg = OmegaConf.load(path_to_conf_file)
 
         # load checkpoint from wandb
-        """
         if cfg.wb_run_path is not None:
             api = wandb.Api()
             run = api.run(cfg.wb_run_path)
@@ -38,8 +37,6 @@ class RlBirdviewAgent():
             self._ckpt = f.name
         else:
             self._ckpt = None
-        """
-        self._ckpt = None
         cfg = OmegaConf.to_container(cfg)
 
         self._obs_configs = cfg['obs_configs']
@@ -60,14 +57,15 @@ class RlBirdviewAgent():
 
     def run_step(self, input_data, timestamp):
         input_data = copy.deepcopy(input_data)
-
-        policy_input = self._wrapper_class.process_obs(input_data, self._wrapper_kwargs['input_states'], train=False)
+        # I have to pass the class. I don't know why.
+        wrapper = self._wrapper_class
+        policy_input = wrapper.process_obs(wrapper,input_data, self._wrapper_kwargs["input_states"], train=False)
 
         actions, values, log_probs, mu, sigma, features = self._policy.forward(
             policy_input, deterministic=True, clip_action=True)
         control = self._wrapper_class.process_act(actions, self._wrapper_kwargs['acc_as_action'], train=False)
         self.supervision_dict = {
-            'action': np.array([control.throttle, control.steer, control.brake], dtype=np.float32),
+            'action': np.array([control[0], control[1], 0], dtype=np.float32),
             'value': values[0],
             'action_mu': mu[0],
             'action_sigma': sigma[0],

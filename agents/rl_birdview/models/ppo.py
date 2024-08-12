@@ -110,12 +110,14 @@ class PPO():
             self.action_statistics.append(actions)
             self.mu_statistics.append(mu)
             self.sigma_statistics.append(sigma)
+            """
             # Debug için
             imgs = []
             for i in range(env.num_envs):
                 wrapper = self.env.envs[i]
                 env_id = wrapper.gym_env._ev_id
                 imgs.append(cv2.cvtColor(wrapper.rendered,cv2.COLOR_BGR2RGB))
+            """
             new_obs, rewards, dones, infos = env.step(actions)
 
             if callback.on_step() is False:

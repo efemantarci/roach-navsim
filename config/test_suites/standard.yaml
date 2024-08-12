@@ -1,0 +1,6 @@
+# @package _group_
+envs:
+  - env_id: navsim-v0
+    env_configs:
+      render_mode: human
+    gpu: [0]

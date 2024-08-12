@@ -36,7 +36,6 @@ def main(cfg: DictConfig):
     reward_configs = {cfg.ev_id: OmegaConf.to_container(cfg.actors[cfg.ev_id].reward)}
     terminal_configs = {cfg.ev_id: OmegaConf.to_container(cfg.actors[cfg.ev_id].terminal)}
 
-
     # env wrapper
     EnvWrapper = config_utils.load_entry_point(cfg_agent.env_wrapper.entry_point)
     wrapper_kargs = cfg_agent.env_wrapper.kwargs
@@ -59,7 +58,7 @@ def main(cfg: DictConfig):
     # save wandb run path to file such that bash file can find it
     with open(last_checkpoint_path, 'w') as f:
         f.write(wandb.run.path)
-    
+    #la gitme bi
     agent.learn(env, total_timesteps=int(cfg.total_timesteps), callback=callback, seed=cfg.seed)
     #server_manager.stop()
 if __name__ == '__main__':
