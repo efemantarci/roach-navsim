@@ -184,6 +184,8 @@ def main(cfg: DictConfig):
     for i,token in enumerate(env.envs[0].scene_loader.tokens):
         log.info(f"Start Benchmarking env_idx {i}, token: {token}")
         run_name = f"{token}"
+        if i == 10:
+            break
         list_render, pdm_score = run_single(
             run_name, env, agent, agents_log_dir, cfg.log_video)
 
@@ -196,7 +198,7 @@ def main(cfg: DictConfig):
             encoder.close()
             encoder = None
             wandb.log({f'video/-{run_name}': wandb.Video(video_path)})
-            df = pd.concat([df,pd.DataFrame([{"token":run_name,**pdm_score}])])
+        df = pd.concat([df,pd.DataFrame([{"token":run_name,**pdm_score}])])
     df.to_csv("pdm_scores.csv",index=False)
     """
     # dump events

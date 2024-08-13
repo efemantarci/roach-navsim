@@ -26,6 +26,6 @@ wb_project: debug
 wb_notes: null
 wb_group: null
 wb_tags: null
-log_video: true
+log_video: false
 dummy: true
 token: 507a3844cf3051de

@@ -89,8 +89,7 @@ class ValeoAction(object):
         calculate_len = len(self.traj)
         initial_ego_state = self.metric_cache.ego_state
         pred_trajectory = transform_trajectory(self._convert_to_trajectory(self.traj),initial_ego_state)
-        #pdm_trajectory = self.metric_cache.trajectory
-        pdm_trajectory = transform_trajectory(self._convert_to_trajectory(self.ego_vehicle.route),initial_ego_state)
+        pdm_trajectory = self.metric_cache.trajectory
         future_sampling = TrajectorySampling(num_poses=5 * calculate_len,interval_length=0.1)
         pdm_states, pred_states = (
                 get_trajectory_as_array(pdm_trajectory, future_sampling, initial_ego_state.time_point),
