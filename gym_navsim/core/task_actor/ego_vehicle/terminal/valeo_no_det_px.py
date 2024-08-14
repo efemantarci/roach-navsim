@@ -1,6 +1,7 @@
 import numpy as np
 from nuplan.common.geometry.convert import absolute_to_relative_poses,relative_to_absolute_poses
 from nuplan.common.actor_state.state_representation import StateSE2
+from gym_navsim.utils.conversion import convert_absolute_to_relative_se2_array
 
 class ValeoNoDetPx(object):
     '''
@@ -52,14 +53,18 @@ class ValeoNoDetPx(object):
         else:
             c_run_stop = False
         """
-         # Done condition 2: lateral distance too large
-        calculate_trajectory = self.ego_vehicle.trajectory[4:] # Origin is not included in trajectory
-        self.traj = calculate_trajectory # Şimdilik fonksiyona böyle vericem sonra hallederim
-        pdm_route = self.ego_vehicle.route_abs
-        abs_traj = relative_to_absolute_poses(StateSE2(*self.ego_vehicle.scene.frames[3].ego_status.ego_pose),[StateSE2(*x) for x in calculate_trajectory])
-        last_traj = abs_traj[-1]
-        d_vec = np.array([*last_traj]) - np.array([*pdm_route[len(abs_traj) - 1]])
-        lat_dist = np.abs(np.linalg.norm(d_vec[:2]) * np.sin(d_vec[2]))
+        # Done condition 2: lateral distance too large
+                
+        abs_traj = relative_to_absolute_poses(StateSE2(*self.scene.frames[3].ego_status.ego_pose),[StateSE2(*x) for x in self.ego_vehicle.trajectory])  
+        origin = abs_traj[-2]
+        # ok kötü duruyor ama şimdilik böyle
+        
+        pdm_relative = convert_absolute_to_relative_se2_array(origin,self.ego_vehicle.route_abs)
+        path_relative = convert_absolute_to_relative_se2_array(origin,np.array([[*se2] for se2 in abs_traj]))
+        
+        last_pdm_rel = pdm_relative[len(path_relative) - 4]
+        last_traj_rel = path_relative[-1]
+        lat_dist = np.abs(last_traj_rel[1] - last_pdm_rel[1])
 
         if lat_dist - self._last_lat_dist > 0.8:
             thresh_lat_dist = lat_dist + 0.5
@@ -67,6 +72,10 @@ class ValeoNoDetPx(object):
             thresh_lat_dist = max(self._min_thresh_lat_dist, self._last_lat_dist)
         c_lat_dist = lat_dist > thresh_lat_dist + 1e-2
         self._last_lat_dist = lat_dist
+
+        # Done condition 3 : distance from pdm too large
+        dist = np.linalg.norm(last_pdm_rel - last_traj_rel)
+        c_dist = dist > 10.0
         
         # Done condition 6: collision_px
         if self._eval_mode:
@@ -82,7 +91,7 @@ class ValeoNoDetPx(object):
         #done = c_blocked or c_lat_dist or c_run_rl or c_collision or c_run_stop or c_collision_px or timeout
         crash = self.ego_vehicle.pdm_score["nac"] < 0.5
         infraction = self.ego_vehicle.pdm_score["dac"] < 0.5
-        done = c_collision_px or crash or infraction or c_lat_dist or c_outside_road or c_run_rl
+        done = c_collision_px or crash or infraction or c_lat_dist or c_outside_road or c_run_rl or c_dist
         # terminal reward
         terminal_reward = 0.0
         if done:
@@ -99,12 +108,11 @@ class ValeoNoDetPx(object):
             if c_collision_px:
                 exploration_suggest['n_steps'] = 100
                 exploration_suggest['suggest'] = ('stop', '')
-        debug_texts = [
-            f'ev: yazmadim :D',
-            f'c_px: bu da yok',
-            f"latd: bu hic yok"
-            f"ovye"
-        ]
+        debug_texts = [f"done : {done}"]
+        # Böyle bir şey mi varmış
+        for k, v in locals().items():
+            if k.startswith('c_') and v:
+                debug_texts.append(f"{k} : {v}")
         done |= finished
         terminal_debug = {"exploration_suggest": exploration_suggest, "debug_texts": debug_texts}
         #return done, timeout, terminal_reward, terminal_debug

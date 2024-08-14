@@ -279,7 +279,7 @@ class ObsManager(ObsManagerBase):
         #self._parent_actor.collision_px = np.any(ev_mask_col & walker_masks[-1])
         self.ego_vehicle.collision_px = np.any(ev_mask & walker_masks[-1])
         self.ego_vehicle.collision_px = np.any(ev_mask & vehicle_masks[-1])
-        self.ego_vehicle.outside_road = not np.any(ev_mask & road_mask)
+        self.ego_vehicle.outside_road = not np.all(ev_mask & road_mask)
         self.ego_vehicle.run_rl = np.any(ev_mask & tl_red_masks[-1])
 
         return obs_dict
