@@ -69,10 +69,6 @@ class NavsimEnv(gym.Env):
             new_token = np.random.choice(self.scene_loader.tokens)
             #new_token = "4a6ab6e35934543a" #"46deeff0d0495df6"
             self.initialize_scene(new_token)
-        #Bunu sil
-        new_token = np.random.choice(self.scene_loader.tokens)
-        #new_token = "4a6ab6e35934543a" #"46deeff0d0495df6"
-        self.initialize_scene(new_token)
         self.ev_handler.reset(self._obs_configs,self.scene,self.split)
         logger.debug("ev_handler reset done!!")
         self.om_handler.reset(self.ev_handler.ego_vehicles)

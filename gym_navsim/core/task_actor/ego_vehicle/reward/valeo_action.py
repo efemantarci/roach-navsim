@@ -32,7 +32,6 @@ class ValeoAction(object):
         else:
             r_action = 0.0
         self._last_steer = self.ego_vehicle.steer
-        pdm_route = self.ego_vehicle.route_abs
         abs_traj = relative_to_absolute_poses(StateSE2(*self.scene.frames[3].ego_status.ego_pose),[StateSE2(*x) for x in self.ego_vehicle.trajectory])  
         origin = abs_traj[-2]
         # ok kötü duruyor ama şimdilik böyle

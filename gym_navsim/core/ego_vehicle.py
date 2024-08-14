@@ -36,7 +36,7 @@ class EgoVehicle:
         self.commands = []
         self.states = [ego_state_to_state_array(initial_ego_state)]
         # Absolute yerine relative koordinat istiyorum
-        self.states[0][:2] = 0
+        self.states[0][:3] = 0
         pdm_trajectory = self.metric_cache.trajectory
         start_time = pdm_trajectory.start_time.time_us
         times = [TimePoint(time) for time in np.linspace(start_time,start_time + 8 * 0.5 * 1e6,9)]

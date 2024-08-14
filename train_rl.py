@@ -42,8 +42,8 @@ def main(cfg: DictConfig):
 
     def env_maker(config):
         env = gym.make(config['env_id'],token=cfg.token, obs_configs=obs_configs, reward_configs=reward_configs,
-                       terminal_configs=terminal_configs,benchmark=True,**config['env_configs'])
-        env = EnvWrapper(env,benchmark=True, **wrapper_kargs)
+                       terminal_configs=terminal_configs,**config['env_configs'])
+        env = EnvWrapper(env, **wrapper_kargs)
         return env
     envs = OmegaConf.to_container(cfg.train_envs)["envs"]
     if cfg.dummy:
@@ -58,7 +58,6 @@ def main(cfg: DictConfig):
     # save wandb run path to file such that bash file can find it
     with open(last_checkpoint_path, 'w') as f:
         f.write(wandb.run.path)
-    #la gitme bi
     agent.learn(env, total_timesteps=int(cfg.total_timesteps), callback=callback, seed=cfg.seed)
     #server_manager.stop()
 if __name__ == '__main__':
