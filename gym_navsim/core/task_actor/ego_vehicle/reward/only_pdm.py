@@ -82,7 +82,7 @@ class ValeoAction(object):
         reward_debug["debug_texts"].append(f'r_speed:{r_speed:5.2f}')
 
         #reward = self.ego_vehicle.pdm_score["ep"] + terminal_reward + r_position + r_rotation + r_action
-        reward = self.ego_vehicle.pdm_score["score"]
+        reward = terminal_reward + r_position + r_rotation + r_action + r_speed
         return reward, reward_debug
     def _convert_to_trajectory(self,poses):
         future_sampling = TrajectorySampling(num_poses=len(poses), interval_length=0.5)

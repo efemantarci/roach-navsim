@@ -65,13 +65,13 @@ class ValeoNoDetPx(object):
         last_pdm_rel = pdm_relative[len(path_relative) - 4]
         last_traj_rel = path_relative[-1]
         lat_dist = np.abs(last_traj_rel[1] - last_pdm_rel[1])
-
-        if lat_dist - self._last_lat_dist > 0.8:
-            thresh_lat_dist = lat_dist + 0.5
-        else:
-            thresh_lat_dist = max(self._min_thresh_lat_dist, self._last_lat_dist)
-        c_lat_dist = lat_dist > thresh_lat_dist + 1e-2
-        self._last_lat_dist = lat_dist
+        c_lat_dist = lat_dist > 6
+        # if lat_dist - self._last_lat_dist > 0.8:
+        #     thresh_lat_dist = lat_dist + 0.5
+        # else:
+        #     thresh_lat_dist = max(self._min_thresh_lat_dist, self._last_lat_dist)
+        # c_lat_dist = lat_dist > thresh_lat_dist + 1e-2
+        # self._last_lat_dist = lat_dist
 
         # Done condition 3 : distance from pdm too large
         dist = np.linalg.norm(last_pdm_rel - last_traj_rel)
@@ -110,9 +110,20 @@ class ValeoNoDetPx(object):
                 exploration_suggest['suggest'] = ('stop', '')
         debug_texts = [f"done : {done}"]
         # Böyle bir şey mi varmış
-        for k, v in locals().items():
-            if k.startswith('c_') and v:
-                debug_texts.append(f"{k} : {v}")
+        infractions = {
+            'run_red_light': c_run_rl,
+            'collision_px': c_collision_px,
+            'outside_road': c_outside_road,
+            'dist': c_dist,
+            'lat_dist': c_lat_dist,
+            'crash': crash,
+            'infraction': infraction
+        }
+        for k,v in infractions.items():
+            if not v:
+                continue
+            debug_texts.append(f"{k} : {v}")
+            print(f"{k} : {v}")
         done |= finished
         terminal_debug = {"exploration_suggest": exploration_suggest, "debug_texts": debug_texts}
         #return done, timeout, terminal_reward, terminal_debug
