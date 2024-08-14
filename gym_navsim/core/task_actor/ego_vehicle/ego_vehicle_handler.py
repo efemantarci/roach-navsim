@@ -1,6 +1,10 @@
 import numpy as np
 from importlib import import_module
 from gym_navsim.core.ego_vehicle import EgoVehicle
+from nuplan.common.actor_state.state_representation import TimePoint
+from navsim.planning.simulation.planner.pdm_planner.simulation.batch_kinematic_bicycle import (
+    BatchKinematicBicycleModel,
+)
 class EgoVehicleHandler(object):
     def __init__(self, reward_configs, terminal_configs):
         self.ego_vehicles = {}
@@ -12,6 +16,7 @@ class EgoVehicleHandler(object):
         self._terminal_configs = terminal_configs
         self.n_scenes = 0
         self.pdm_score_total = 0
+        self.motion_model = BatchKinematicBicycleModel()
     # Task config yerine obs config vericem. Zaten sadece env_id yi kullanıyoruz
     def reset(self, obs_config,scene,split):
         for ev_id in obs_config:
@@ -45,13 +50,25 @@ class EgoVehicleHandler(object):
 
     def apply_control(self, action_dict):
         for ev_id, action in action_dict.items():
+            ego_vehicle = self.ego_vehicles[ev_id]
+            ego_vehicle.commands.append(action)
             throttle = action[0]
             steer = action[1] # -1 left 0 ahead 1 right
+            command_states = np.array(ego_vehicle.commands)
+            simulated_states = np.array(ego_vehicle.states)
+            sampling_time = TimePoint(0.5 * 1e6)
+            # Şimdilik sadece ilk (tek) elemanı alıyorum. Normalde bir sürü state dönüyordu
+            new_state = self.motion_model.propagate_state(
+                states=simulated_states,
+                command_states=command_states,
+                sampling_time=sampling_time,
+            )[0]
+            ego_vehicle.states.append(new_state)
             angle = np.arcsin(steer) / 2
             speed = 3 # Bunu sonra alıcam
             delta_x = throttle * np.cos(angle) * speed
             delta_y = throttle * np.sin(angle) * speed
-
+            
             old_trajectory = self.terminal_handlers[ev_id].ego_vehicle.trajectory
             last_trajectory = old_trajectory[-1]
             added_trajectory = np.array([[last_trajectory[0] + delta_x, last_trajectory[1] + delta_y, last_trajectory[2] + angle]])
@@ -59,6 +76,20 @@ class EgoVehicleHandler(object):
             self.terminal_handlers[ev_id].ego_vehicle.trajectory = new_trajectory
             self.reward_handlers[ev_id].ego_vehicle.trajectory = new_trajectory
             self.ego_vehicles[ev_id].steer = steer
+            """
+            added_trajectory = ego_vehicle.states[-1][:3]
+            new_trajectory = np.concatenate([ego_vehicle.trajectory, [added_trajectory]])
+            self.terminal_handlers[ev_id].ego_vehicle.trajectory = new_trajectory
+            self.reward_handlers[ev_id].ego_vehicle.trajectory = new_trajectory
+            self.ego_vehicles[ev_id].steer = steer
+            """
+            """
+            time = self.ego_vehicles[ev_id].time
+            ego_vehicle = self.ego_vehicles[ev_id]
+            self.ego_vehicles[ev_id].trajectory = ego_vehicle.human_trajectory[:time+5]
+            self.terminal_handlers[ev_id].ego_vehicle.trajectory = self.ego_vehicles[ev_id].trajectory
+            self.reward_handlers[ev_id].ego_vehicle.trajectory = self.ego_vehicles[ev_id].trajectory
+            """
 
     def tick(self, timestamp):
         reward_dict, done_dict, info_dict = {}, {}, {}

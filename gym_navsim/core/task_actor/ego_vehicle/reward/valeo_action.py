@@ -33,21 +33,24 @@ class ValeoAction(object):
             r_action = 0.0
         self._last_steer = self.ego_vehicle.steer
         pdm_route = self.ego_vehicle.route_abs
-        abs_traj = relative_to_absolute_poses(StateSE2(*self.scene.frames[3].ego_status.ego_pose),[StateSE2(*x) for x in calculate_trajectory])
-        last_traj = abs_traj[-1]
- 
-        d_vec = np.array([*last_traj]) - np.array([*pdm_route[len(abs_traj) - 1]])
-        lateral_distance = np.abs(np.linalg.norm(d_vec[:2]) * np.sin(d_vec[2]))
-        if self.ego_vehicle.pdm_score["ep"] > 0.9 and self.ego_vehicle.time > 1:
-            r_position = 0.0
-        else:
-            r_position = -1.0 * (lateral_distance / 2.0)
+        abs_traj = relative_to_absolute_poses(StateSE2(*self.scene.frames[3].ego_status.ego_pose),[StateSE2(*x) for x in self.ego_vehicle.trajectory])  
+        origin = abs_traj[-2]
+        # ok kötü duruyor ama şimdilik böyle
+        
+        pdm_relative = convert_absolute_to_relative_se2_array(origin,self.ego_vehicle.route_abs)
+        path_relative = convert_absolute_to_relative_se2_array(origin,np.array([[*se2] for se2 in abs_traj]))
+        
+        last_pdm_rel = pdm_relative[len(path_relative) - 4]
+        last_traj_rel = path_relative[-1]
+        lateral_distance = np.abs(last_traj_rel[1] - last_pdm_rel[1])
+        r_position = -1.0 * np.abs(lateral_distance / 2.0)
 
-        angle_difference = np.abs(last_traj.heading - pdm_route[len(abs_traj) - 1][2]) / np.pi
+        angle_difference = np.abs(last_traj_rel[2] - last_pdm_rel[2]) / np.pi
         r_rotation = -1.0 * angle_difference
 
         start_idx = self.scene.scene_metadata.num_history_frames + self.ego_vehicle.time - 1 - 1 # -1 comes because we are rewarding previous frame
 
+        last_traj = abs_traj[-1]
         hazard_vehicle_loc = self.lbc_hazard_vehicle(self.scene.frames[start_idx],last_traj,proximity_threshold=9.5)
         hazard_ped_loc = self.lbc_hazard_walker(self.scene.frames[start_idx],last_traj, proximity_threshold=9.5)
         traffic_light_dist = self.get_traffic_light(self.scene.frames[start_idx],last_traj)

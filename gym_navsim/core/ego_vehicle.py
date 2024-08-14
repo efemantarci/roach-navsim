@@ -10,6 +10,10 @@ from nuplan.common.actor_state.state_representation import TimePoint
 from gym_navsim.utils.conversion import convert_absolute_to_relative_se2_array
 from nuplan.common.geometry.convert import absolute_to_relative_poses,relative_to_absolute_poses
 from nuplan.common.actor_state.state_representation import StateSE2
+from shapely import Point
+from navsim.planning.simulation.planner.pdm_planner.utils.pdm_array_representation import (
+    ego_state_to_state_array,
+)
 class EgoVehicle:
     def __init__(self,scene,split) -> None:
         self.scene = scene
@@ -29,12 +33,23 @@ class EgoVehicle:
         self.metric_cache = pickle.load(f)
         # Route info
         initial_ego_state = self.metric_cache.ego_state
+        self.commands = []
+        self.states = [ego_state_to_state_array(initial_ego_state)]
+        # Absolute yerine relative koordinat istiyorum
+        self.states[0][:2] = 0
         pdm_trajectory = self.metric_cache.trajectory
         start_time = pdm_trajectory.start_time.time_us
         times = [TimePoint(time) for time in np.linspace(start_time,start_time + 8 * 0.5 * 1e6,9)]
         pdm_states = pdm_trajectory.get_state_at_times(times)
         self.route = convert_absolute_to_relative_se2_array(initial_ego_state.rear_axle, np.array([[*se2.center] for se2 in pdm_states]))[1:]
         self.route_abs = np.array([[*se2.center] for se2 in pdm_states])
+        # Added to fit the centerline
+        center_linestring = self.metric_cache.centerline.linestring
+        first_pdm_point = Point(self.route_abs[0][0],self.route_abs[0][1])
+        ego_start_point = Point(initial_ego_state.center.x,initial_ego_state.center.y)
+        closest_point = center_linestring.interpolate(center_linestring.project(first_pdm_point))
+        difference = np.array([first_pdm_point.x - closest_point.x,first_pdm_point.y - closest_point.y])
+        self.route_abs[:,:2] -= difference
         self.token = scene.scene_metadata.initial_token
         self.pdm_score = {
             "nac": 1,
@@ -55,10 +70,3 @@ class EgoVehicle:
         self.human_trajectory = np.concatenate([past_poses,human_poses])
         self.trajectory = past_poses
         self.past_poses = past_poses
-    def rotate(self,points, angle):
-        """Rotate points by a given angle."""
-        rotation_matrix = np.array([
-            [np.cos(angle), -np.sin(angle)],
-            [np.sin(angle), np.cos(angle)]
-        ])
-        return points @ rotation_matrix.T

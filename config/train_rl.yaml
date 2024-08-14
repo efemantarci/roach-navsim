@@ -15,11 +15,11 @@ actors:
       kwargs: {}
 ev_id: hero
 carla_sh_path: /home/ubuntu/apps/carla/carla910/CarlaUE4.sh
-total_timesteps: 500000 #1e8
+total_timesteps: 1e8 #1e8
 seed: 2021
 kill_running: true
 dummy: true # true diyorum şimdi bakalım ne olacak
-token : 7979f15a331e5075 #9c1e4098a32a5432 test
+token : 9c1e4098a32a5432 #test #7979f15a331e5075 # train 
 wb_project: train_rl
 wb_name: null
 wb_notes: null

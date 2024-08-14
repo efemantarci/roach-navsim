@@ -87,15 +87,8 @@ class ValeoNoDetPx(object):
         terminal_reward = 0.0
         if done:
             terminal_reward = -1.0
-        if finished:
-            terminal_reward = 1.0
-        """
-        if c_run_rl or c_collision or c_run_stop or c_collision_px:
-            ev_vel = self._ego_vehicle.vehicle.get_velocity()
-            ev_speed = np.linalg.norm(np.array([ev_vel.x, ev_vel.y]))
-            terminal_reward -= ev_speed
-        """
-        if c_collision_px:
+            
+        if c_collision_px or c_run_rl or c_outside_road:
             terminal_reward -= np.linalg.norm(self.ego_vehicle.velocity)
         # terminal guide
         exploration_suggest = {
@@ -106,31 +99,6 @@ class ValeoNoDetPx(object):
             if c_collision_px:
                 exploration_suggest['n_steps'] = 100
                 exploration_suggest['suggest'] = ('stop', '')
-        """
-        if self._exploration_suggest:
-            if c_blocked:
-                exploration_suggest['n_steps'] = 100
-                exploration_suggest['suggest'] = ('go', '')
-            if c_lat_dist:
-                exploration_suggest['n_steps'] = 100
-                exploration_suggest['suggest'] = ('go', 'turn')
-            if c_run_rl or c_collision or c_run_stop or c_collision_px:
-                exploration_suggest['n_steps'] = 100
-                exploration_suggest['suggest'] = ('stop', '')
-
-        # debug info
-
-        debug_texts = [
-            f'ev: {int(self._eval_mode)} blo:{int(c_blocked)} to:{int(timeout)}',
-            f'c_px:{int(c_collision_px)} col:{int(c_collision)} red:{int(c_run_rl)} st:{int(c_run_stop)}',
-            f"latd:{int(c_lat_dist)}, {lat_dist:.2f}/{thresh_lat_dist:.2f}, "
-            f"[{exploration_suggest['n_steps']} {exploration_suggest['suggest']}]"
-        ]
-        terminal_debug = {
-            'exploration_suggest': exploration_suggest,
-            'debug_texts': debug_texts
-        }
-        """
         debug_texts = [
             f'ev: yazmadim :D',
             f'c_px: bu da yok',
@@ -140,7 +108,7 @@ class ValeoNoDetPx(object):
         done |= finished
         terminal_debug = {"exploration_suggest": exploration_suggest, "debug_texts": debug_texts}
         #return done, timeout, terminal_reward, terminal_debug
-        return done, finished, terminal_reward, terminal_debug # Isn't finishing a good thing??
+        return done, finished, terminal_reward, terminal_debug
     def rotate(self, points, angle):
         """Rotate points by a given angle."""
         rotation_matrix = np.array([
