@@ -55,7 +55,7 @@ class ValeoNoDetPx(object):
         """
         # Done condition 2: lateral distance too large
                 
-        abs_traj = relative_to_absolute_poses(StateSE2(*self.scene.frames[3].ego_status.ego_pose),[StateSE2(*x) for x in self.ego_vehicle.trajectory])  
+        abs_traj = relative_to_absolute_poses(StateSE2(*self.ego_vehicle.scene.frames[3].ego_status.ego_pose),[StateSE2(*x) for x in self.ego_vehicle.trajectory])  
         origin = abs_traj[-2]
         # ok kötü duruyor ama şimdilik böyle
         
