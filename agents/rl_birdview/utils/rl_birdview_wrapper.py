@@ -19,8 +19,8 @@ class RlBirdviewWrapper(gym.Wrapper):
         if 'control' in self._input_states:
             state_spaces.append(env.observation_space[self._ev_id]['control']['throttle'])
             state_spaces.append(env.observation_space[self._ev_id]['control']['steer'])
-            state_spaces.append(env.observation_space[self._ev_id]['control']['brake'])
-            state_spaces.append(env.observation_space[self._ev_id]['control']['gear'])
+            #state_spaces.append(env.observation_space[self._ev_id]['control']['brake'])
+            #state_spaces.append(env.observation_space[self._ev_id]['control']['gear'])
         if 'acc_xy' in self._input_states:
             state_spaces.append(env.observation_space[self._ev_id]['velocity']['acc_xy'])
         if 'vel_xy' in self._input_states:
