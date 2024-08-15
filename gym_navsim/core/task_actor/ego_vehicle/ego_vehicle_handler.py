@@ -15,6 +15,7 @@ class EgoVehicleHandler(object):
         self._reward_configs = reward_configs
         self._terminal_configs = terminal_configs
         self.n_scenes = 0
+        self.n_successful_scenes = 0
         self.pdm_score_total = 0
         self.motion_model = BatchKinematicBicycleModel()
     # Task config yerine obs config vericem. Zaten sadece env_id yi kullanıyoruz
@@ -124,6 +125,8 @@ class EgoVehicleHandler(object):
                 info_dict[ev_id]['episode_event'] = self.info_buffers[ev_id]
                 self.n_scenes += 1
                 self.pdm_score_total += self.ego_vehicles[ev_id].pdm_score["score"]
+                if self.ego_vehicles[ev_id].pdm_score["score"] > 0 and self.ego_vehicles[ev_id].time > 7:
+                    self.n_successful_scenes += 1
                 total_length = 0.5 # Burayı carladan çekiyordu :D Alt satırı takmayın
                 completed_length = 0.5
                 total_length = max(total_length, 0.001)
@@ -174,7 +177,8 @@ class EgoVehicleHandler(object):
                     'route_dev': len(self.info_buffers[ev_id]['route_dev']) / completed_length,
                     'vehicle_blocked': len(self.info_buffers[ev_id]['vehicle_blocked']) / completed_length,
                     "number_of_scenes": self.n_scenes,
-                    "avg_pdm_score": self.pdm_score_total / self.n_scenes
+                    "avg_pdm_score": self.pdm_score_total / self.n_scenes,
+                    "number_of_successful_scenes": self.n_successful_scenes
                 }
 
         done_dict['__all__'] = all(done for obs_id, done in done_dict.items())
