@@ -19,7 +19,7 @@ total_timesteps: 1e8 #1e8
 seed: 2021
 kill_running: true
 dummy: true # true diyorum şimdi bakalım ne olacak
-token : 7979f15a331e5075 # train #9c1e4098a32a5432 #test
+token : 7979f15a331e5075 # train # #0057ce5b81c35a81 #test 
 wb_project: train_rl
 wb_name: null
 wb_notes: null

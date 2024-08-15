@@ -51,19 +51,31 @@ class EgoVehicleHandler(object):
     def apply_control(self, action_dict):
         for ev_id, action in action_dict.items():
             ego_vehicle = self.ego_vehicles[ev_id]
-            ego_vehicle.commands.append(action)
+            last_state = ego_vehicle.states[-1]
+            x,y,heading,velocity,steering_angle,ang_vel = ego_vehicle.motion_model.update(
+                x = last_state[0],
+                y = last_state[1],
+                yaw = last_state[2],
+                velocity = last_state[3],
+                acceleration = action[0] * 5, # Şimdilik hardcoded
+                steering_angle = action[1]
+            )
             throttle = action[0]
             steer = action[1] # -1 left 0 ahead 1 right
+            ego_vehicle.states.append([x,y,heading,velocity,action[0],steering_angle])
+            """
+            ego_vehicle.commands.append(action)
+       
             command_states = np.array(ego_vehicle.commands)
             simulated_states = np.array(ego_vehicle.states)
             sampling_time = TimePoint(0.5 * 1e6)
-            # Şimdilik sadece ilk (tek) elemanı alıyorum. Normalde bir sürü state dönüyordu
             new_state = self.motion_model.propagate_state(
                 states=simulated_states,
                 command_states=command_states,
                 sampling_time=sampling_time,
             )[-1]
             ego_vehicle.states.append(new_state)
+            """
             # angle = np.arcsin(steer) / 2
             # speed = 3 # Bunu sonra alıcam
             # delta_x = throttle * np.cos(angle) * speed

@@ -26,16 +26,20 @@ class ObsManager(ObsManagerBase):
 
     def get_observation(self,timestamp):
         state = self.ego_vehicle.states[timestamp]
-        acc_w = np.array([state[StateIndex.ACCELERATION_X], state[StateIndex.ACCELERATION_Y]])
-        vel_w = np.array([state[StateIndex.VELOCITY_X], state[StateIndex.VELOCITY_Y]])
+        acc_w = 0
+        vel_w = [state[3]]
+        ang_w = 0
         self.ego_vehicle.velocity = vel_w
-        ang_w = np.array([state[StateIndex.ANGULAR_VELOCITY]])
+        # acc_w = np.array([state[StateIndex.ACCELERATION_X], state[StateIndex.ACCELERATION_Y]])
+        # vel_w = np.array([state[StateIndex.VELOCITY_X], state[StateIndex.VELOCITY_Y]])
+        # self.ego_vehicle.velocity = vel_w
+        # ang_w = np.array([state[StateIndex.ANGULAR_VELOCITY]])
         #ang_w = self._parent_actor.vehicle.get_angular_velocity() We don't have angular velocity for now
 
         obs = {
             'acc_xy': np.array(acc_w, dtype=np.float32),
             'vel_xy': np.array(vel_w, dtype=np.float32),
-            'vel_ang_z': np.array(0, dtype=np.float32)
+            'vel_ang_z': np.array(ang_w, dtype=np.float32)
         }
         return obs
 

@@ -4,16 +4,15 @@ from nuplan.planning.simulation.trajectory.trajectory_sampling import Trajectory
 from navsim.evaluate.pdm_score import transform_trajectory,get_trajectory_as_array
 import numpy as np
 import os
-from shapely import affinity
-from shapely.geometry import Polygon, LineString
 from nuplan.common.actor_state.state_representation import TimePoint
 from gym_navsim.utils.conversion import convert_absolute_to_relative_se2_array
-from nuplan.common.geometry.convert import absolute_to_relative_poses,relative_to_absolute_poses
-from nuplan.common.actor_state.state_representation import StateSE2
 from shapely import Point
 from navsim.planning.simulation.planner.pdm_planner.utils.pdm_array_representation import (
     ego_state_to_state_array,
 )
+from gym_navsim.utils.bicycle_model import KinematicBicycleModel
+from nuplan.common.actor_state.vehicle_parameters import get_pacifica_parameters
+from navsim.planning.simulation.planner.pdm_planner.utils.pdm_enums import StateIndex
 class EgoVehicle:
     def __init__(self,scene,split) -> None:
         self.scene = scene
@@ -35,6 +34,10 @@ class EgoVehicle:
         initial_ego_state = self.metric_cache.ego_state
         self.commands = []
         self.states = [ego_state_to_state_array(initial_ego_state)]
+        inital_state = ego_state_to_state_array(initial_ego_state)
+        # x,y,heading,v_x,a_x,steering_angle
+        first_state = np.array([0,0,0,inital_state[StateIndex.VELOCITY_X],inital_state[StateIndex.ACCELERATION_X],inital_state[StateIndex.STEERING_ANGLE]])
+        self.states.append(first_state)
         # Absolute yerine relative koordinat istiyorum
         self.states[0][:3] = 0
         pdm_trajectory = self.metric_cache.trajectory
@@ -70,3 +73,5 @@ class EgoVehicle:
         self.human_trajectory = np.concatenate([past_poses,human_poses])
         self.trajectory = past_poses
         self.past_poses = past_poses
+        wheelbase = get_pacifica_parameters().wheel_base
+        self.motion_model = KinematicBicycleModel(wheelbase=wheelbase,delta_time=0.5,max_steer=np.pi/3)

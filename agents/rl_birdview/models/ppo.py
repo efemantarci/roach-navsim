@@ -133,8 +133,9 @@ class PPO():
                 # crash_img = wrapper._render_dict["prev_im_render"]
                 # img = cv2.cvtColor(wrapper._render_dict["im_render"],cv2.COLOR_BGR2RGB)
                 # cv2.putText(img,f"Rewards: {rewards}",(10,10),cv2.FONT_HERSHEY_SIMPLEX,0.3,(255,0,0),1)
+                # cv2.putText(img,f"Throttle : {actions[idx][0]:.2f} Steer: {actions[idx][1]:.2f}",(10,20),cv2.FONT_HERSHEY_SIMPLEX,0.3,(255,0,0),1)
                 # for i,text in enumerate(infos[0]["reward_debug"]["debug_texts"]):
-                #     cv2.putText(img,text,(10,20+i*10),cv2.FONT_HERSHEY_SIMPLEX,0.3,(255,0,0),1)
+                #     cv2.putText(img,text,(10,30+i*10),cv2.FONT_HERSHEY_SIMPLEX,0.3,(255,0,0),1)               
                 # #cv2.circle(img, (y2,x2), 5, (0, 0, 255), 5)
                 # cv2.imwrite(f"rollout_{idx}_{index}_{n_steps}_{token}.png",img)
                 # cv2.imwrite(f"rollout_{idx}_{index}_{n_steps}!_{token}.png",crash_img) 
@@ -152,7 +153,7 @@ class PPO():
             #     start_origin = StateSE2(*ego_vehicle.scene.frames[3].ego_status.ego_pose)
             #     abs_poses = relative_to_absolute_poses(start_origin,[StateSE2(*last)])[0]
             #     origin = relative_to_absolute_poses(start_origin,[StateSE2(*ego_vehicle.trajectory[ego_vehicle.time - 2 + 4])])[0]
-            #     # Dünyanın en çirkin kodu ama olsun
+            #     Dünyanın en çirkin kodu ama olsun
             #     rel_poses = convert_absolute_to_relative_se2_array(origin,[*abs_poses])[0]
             #     point = Point2D(rel_poses[0],rel_poses[1])
             #     warped = cv2.transform(np.array([[self._world_to_pixel(point)[::-1]]]),self.M_warp)
@@ -166,11 +167,12 @@ class PPO():
             #     y = int(warped[0][0][1])
             #     img = imgs[idx]
             #     cv2.putText(img,f"Rewards: {rewards}",(10,10),cv2.FONT_HERSHEY_SIMPLEX,0.3,(255,0,0),1)
+            #     cv2.putText(img,f"Throttle : {actions[idx][0]:.2f} Steer: {actions[idx][1]:.2f}",(10,20),cv2.FONT_HERSHEY_SIMPLEX,0.3,(255,0,0),1)
             #     for i,text in enumerate(infos[0]["reward_debug"]["debug_texts"]):
-            #         cv2.putText(img,text,(10,20+i*10),cv2.FONT_HERSHEY_SIMPLEX,0.3,(255,0,0),1)
+            #         cv2.putText(img,text,(10,30+i*10),cv2.FONT_HERSHEY_SIMPLEX,0.3,(255,0,0),1)
             #     cv2.circle(img, (x,y), 5, (0, 0, 255), -1)
             #     cv2.arrowedLine(img,(x,y),(int(warped_line[0][0][0]),int(warped_line[0][0][1])),(0,255,0),2)
-            #     #cv2.circle(img, (y2,x2), 5, (0, 0, 255), 5)
+            #     cv2.circle(img, (y2,x2), 5, (0, 0, 255), 5)
             #     cv2.imwrite(f"rollout_{idx}_{index}_{n_steps}_{token}.png",img) 
 
             n_steps += 1
