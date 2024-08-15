@@ -162,6 +162,7 @@ class RlBirdviewWrapper(gym.Wrapper):
         if not train:
             action = action[0]
         """
+        """
         if acc_as_action:
             acc, steer = action.astype(np.float64)
             if acc >= 0.0:
@@ -172,8 +173,9 @@ class RlBirdviewWrapper(gym.Wrapper):
                 brake = np.abs(acc)
         else:
             throttle, steer, brake = action.astype(np.float64)
-
-        throttle = np.clip(throttle, 0, 1)
+        """
+        throttle, steer = action.astype(np.float64)
+        throttle = np.clip(throttle, -1, 1)
         steer = np.clip(steer, -1, 1)
         # Brake nasıl kullanıcam bilmiyorum
         return (throttle,steer)
