@@ -51,6 +51,21 @@ class EgoVehicleHandler(object):
 
     def apply_control(self, action_dict):
         for ev_id, action in action_dict.items():
+            throttle = action[0]
+            steer = action[1] # -1 left 0 ahead 1 right
+            angle = np.arcsin(steer) / 2
+            speed = 3 # Bunu sonra alıcam
+            delta_x = throttle * np.cos(angle) * speed
+            delta_y = throttle * np.sin(angle) * speed
+
+            old_trajectory = self.terminal_handlers[ev_id].ego_vehicle.trajectory
+            last_trajectory = old_trajectory[-1]
+            added_trajectory = np.array([[last_trajectory[0] + delta_x, last_trajectory[1] + delta_y, last_trajectory[2] + angle]])
+            new_trajectory = np.concatenate([old_trajectory, added_trajectory])
+            self.terminal_handlers[ev_id].ego_vehicle.trajectory = new_trajectory
+            self.reward_handlers[ev_id].ego_vehicle.trajectory = new_trajectory
+            self.ego_vehicles[ev_id].steer = steer
+            """
             ego_vehicle = self.ego_vehicles[ev_id]
             last_state = ego_vehicle.states[-1]
             x,y,heading,velocity,steering_angle,ang_vel = ego_vehicle.motion_model.update(
@@ -64,6 +79,7 @@ class EgoVehicleHandler(object):
             throttle = action[0]
             steer = action[1] # -1 left 0 ahead 1 right
             ego_vehicle.states.append([x,y,heading,velocity,action[0],steering_angle])
+            """
             """
             ego_vehicle.commands.append(action)
        
@@ -89,11 +105,13 @@ class EgoVehicleHandler(object):
             # self.terminal_handlers[ev_id].ego_vehicle.trajectory = new_trajectory
             # self.reward_handlers[ev_id].ego_vehicle.trajectory = new_trajectory
             # self.ego_vehicles[ev_id].steer = steer
+            """
             added_trajectory = ego_vehicle.states[-1][:3]
             new_trajectory = np.concatenate([ego_vehicle.trajectory, [added_trajectory]])
             self.terminal_handlers[ev_id].ego_vehicle.trajectory = new_trajectory
             self.reward_handlers[ev_id].ego_vehicle.trajectory = new_trajectory
             self.ego_vehicles[ev_id].steer = steer
+            """
             """
             time = self.ego_vehicles[ev_id].time
             ego_vehicle = self.ego_vehicles[ev_id]

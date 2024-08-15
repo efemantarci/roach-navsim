@@ -184,8 +184,6 @@ def main(cfg: DictConfig):
     for i,token in enumerate(env.envs[0].scene_loader.tokens):
         log.info(f"Start Benchmarking env_idx {i}, token: {token}")
         run_name = f"{token}"
-        if i == 10:
-            break
         list_render, pdm_score = run_single(
             run_name, env, agent, agents_log_dir, cfg.log_video)
 
@@ -198,31 +196,10 @@ def main(cfg: DictConfig):
             encoder.close()
             encoder = None
             wandb.log({f'video/-{run_name}': wandb.Video(video_path)})
+        if (i + 1) % 1000:
+            df.to_csv("pdm_scores.csv",index=False)
         df = pd.concat([df,pd.DataFrame([{"token":run_name,**pdm_score}])])
     df.to_csv("pdm_scores.csv",index=False)
-    """
-    # dump events
-    diags_json_path = (diags_dir / f'{run_name}.json').as_posix()
-    with open(diags_json_path, 'w') as fd:
-        json.dump(ep_event_dict, fd, indent=4, sort_keys=False)
-
-    # save diags and agents_log
-    wandb.save(diags_json_path)
-    """
-
-    """
-    # save statistics
-    for actor_id, ep_stat in ep_stat_dict.items():
-        ep_stat_buffer[actor_id].append(ep_stat)
-        log_dict = {}
-        for k, v in ep_stat.items():
-            k_actor = f'{actor_id}/{k}'
-            log_dict[k_actor] = v
-        wandb.log(log_dict, step=task_idx)
-    
-    with open(ep_state_buffer_json, 'w') as fd:
-        json.dump(ep_stat_buffer, fd, indent=4, sort_keys=True)
-    """
     # clean up
     list_render.clear()
     ep_stat_dict = None
@@ -231,32 +208,6 @@ def main(cfg: DictConfig):
     # close env
     env.close()
     env = None
-    """
-    # log after suite is completed
-    table_data = []
-    ep_stat_keys = None
-    for actor_id, list_ep_stat in json.load(open(ep_state_buffer_json, 'r')).items():
-        avg_ep_stat = WandbCallback.get_avg_ep_stat(list_ep_stat)
-        data = [suite_name, actor_id, str(len(list_ep_stat))]
-        if ep_stat_keys is None:
-            ep_stat_keys = list(avg_ep_stat.keys())
-        data += [f'{avg_ep_stat[k]:.4f}' for k in ep_stat_keys]
-        table_data.append(data)
-
-    table_columns = ['Suite', 'actor_id', 'n_episode'] + ep_stat_keys
-    wandb.log({'table/summary': wandb.Table(data=table_data, columns=table_columns)})
-
-    with open(last_checkpoint_path, 'w') as f:
-        f.write(f'{env_idx+1}')
-
-    log.info(f"Finished Benchmarking env_idx {env_idx}, suite_name: {suite_name}")
-    if env_idx+1 == len(cfg.test_suites):
-        log.info(f"Finished, {env_idx+1}/{len(cfg.test_suites)}")
-        return
-    else:
-        log.info(f"Not finished, {env_idx+1}/{len(cfg.test_suites)}")
-        sys.exit(1)
-    """
 
 if __name__ == '__main__':
     main()
