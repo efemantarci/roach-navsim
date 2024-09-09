@@ -21,6 +21,7 @@ class ObsManager(ObsManagerBase):
 
     def get_observation(self,timestamp):
         """
+        This is not used for now
         control = self._parent_actor.vehicle.get_control()
         speed_limit = self._parent_actor.vehicle.get_speed_limit() / 3.6 * 0.8
         obs = {
@@ -30,8 +31,7 @@ class ObsManager(ObsManagerBase):
             'gear': np.array([control.gear], dtype=np.float32),
             'speed_limit': np.array([speed_limit], dtype=np.float32),
         }
-        return obs
-        Bunu şu an yapamıyorum
+        return obs 
         """
         obs = {
             'throttle': np.array([0], dtype=np.float32),

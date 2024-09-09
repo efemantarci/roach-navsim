@@ -19,6 +19,7 @@ class RlBirdviewWrapper(gym.Wrapper):
         if 'control' in self._input_states:
             state_spaces.append(env.observation_space[self._ev_id]['control']['throttle'])
             state_spaces.append(env.observation_space[self._ev_id]['control']['steer'])
+            # Brake and gear are not implemented
             #state_spaces.append(env.observation_space[self._ev_id]['control']['brake'])
             #state_spaces.append(env.observation_space[self._ev_id]['control']['gear'])
         if 'acc_xy' in self._input_states:
@@ -35,6 +36,7 @@ class RlBirdviewWrapper(gym.Wrapper):
              'birdview': env.observation_space[self._ev_id]['birdview']['masks']})
         if self._acc_as_action:
             # act: acc(throttle/brake), steer
+            # Code is implemented for this part. Acc_as_action must be true
             env.action_space = gym.spaces.Box(low=np.array([-1, -1]), high=np.array([1, 1]), dtype=np.float32)
         else:
             # act: throttle, steer, brake
@@ -52,13 +54,6 @@ class RlBirdviewWrapper(gym.Wrapper):
             self.env.switch_scene_loader("trainval")
 
         self.obs_ma = self.env.reset()
-        
-        """
-        action_ma = {self._ev_id: carla.VehicleControl(manual_gear_shift=True, gear=1)}
-        obs_ma, _, _, _ = self.env.step(action_ma)
-        action_ma = {self._ev_id: carla.VehicleControl(manual_gear_shift=False)}
-        obs_ma, _, _, _ = self.env.step(action_ma)
-        """
         obs = self.process_obs(self.obs_ma[self._ev_id], self._input_states)
 
         self._render_dict['prev_obs'] = obs
@@ -174,8 +169,8 @@ class RlBirdviewWrapper(gym.Wrapper):
         else:
             throttle, steer, brake = action.astype(np.float64)
         """
+        # Assuming acc_as_action is always true. So no brakes
         throttle, steer = action.astype(np.float64)
         throttle = np.clip(throttle, -1, 1)
         steer = np.clip(steer, -1, 1)
-        # Brake nasıl kullanıcam bilmiyorum
         return (throttle,steer)

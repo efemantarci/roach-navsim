@@ -2,6 +2,7 @@ import numpy as np
 from gym import spaces
 
 from gym_navsim.core.obs_manager.obs_manager import ObsManagerBase
+from navsim.planning.simulation.planner.pdm_planner.utils.pdm_enums import StateIndex
 
 
 class ObsManager(ObsManagerBase):
@@ -25,6 +26,25 @@ class ObsManager(ObsManagerBase):
         self.agent_input = self.scene.get_agent_input().ego_statuses[-1]
 
     def get_observation(self,timestamp):
+        state = self.ego_vehicle.states[timestamp]
+        acc_w = 0
+        vel_w = [state[3]]
+        ang_w = 0
+        self.ego_vehicle.velocity = vel_w
+        # acc_w = np.array([state[StateIndex.ACCELERATION_X], state[StateIndex.ACCELERATION_Y]])
+        # vel_w = np.array([state[StateIndex.VELOCITY_X], state[StateIndex.VELOCITY_Y]])
+        # self.ego_vehicle.velocity = vel_w
+        # ang_w = np.array([state[StateIndex.ANGULAR_VELOCITY]])
+        #ang_w = self._parent_actor.vehicle.get_angular_velocity() We don't have angular velocity for now
+
+        obs = {
+            'acc_xy': np.array(acc_w, dtype=np.float32),
+            'vel_xy': np.array(vel_w, dtype=np.float32),
+            'vel_ang_z': np.array(ang_w, dtype=np.float32)
+        }
+        return obs
+        """
+        OLD METHOD -> Agent can teleport with this part
         acc_w = self.agent_input.ego_acceleration
         if timestamp == 0:
             vel_w = self.agent_input.ego_velocity
@@ -41,6 +61,7 @@ class ObsManager(ObsManagerBase):
             'vel_ang_z': np.array(0, dtype=np.float32)
         }
         return obs
+        """
 
     def clean(self):
         self._parent_actor = None

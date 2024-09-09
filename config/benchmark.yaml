@@ -11,7 +11,7 @@ actors:
       entry_point: reward.valeo_action:ValeoAction
       kwargs: {}
     terminal:
-      entry_point: terminal.valeo_no_det_px:ValeoNoDetPx
+      entry_point: terminal.valeo_benchmark:ValeoNoDetPx
       kwargs: {}
 ev_id: hero
 carla_sh_path: null

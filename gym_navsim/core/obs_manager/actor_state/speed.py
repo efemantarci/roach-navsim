@@ -1,6 +1,7 @@
 from gym_navsim.core.obs_manager.obs_manager import ObsManagerBase
 from gym import spaces
 import numpy as np
+from navsim.planning.simulation.planner.pdm_planner.utils.pdm_enums import StateIndex
 
 class ObsManager(ObsManagerBase):
     def __init__(self, obs_config):
@@ -14,15 +15,25 @@ class ObsManager(ObsManagerBase):
     def attach_ego_vehicle(self, ego_vehicle):
         self.scene = ego_vehicle.scene
         self.agent_input = ego_vehicle.agent_input
+        self.ego_vehicle = ego_vehicle
     def get_observation(self,timestamp):
+        state = self.ego_vehicle.states[timestamp]
+        np_vel = np.array([state[StateIndex.VELOCITY_X],state[StateIndex.VELOCITY_Y],0]) # z - axis is 0 for now 
+        np_fvec = np.array([1, 0, 0]) # Car is looking at top at the start
+        speed_xy = np.linalg.norm(np_vel)
+        speed = speed_xy # We are in 2D
+        forward_speed = state[StateIndex.VELOCITY_X] # X is forward
+        """
+        OLD METHOD -> Agent can teleport with this
         velocity = self.agent_input.ego_velocity
+        
         np_vel = np.array([velocity[0],velocity[1],0]) # z - axis is 0 for now 
         np_fvec = np.array([1, 0, 0]) # Car is looking at top at the start
 
         speed = np.linalg.norm(np_vel)
         speed_xy = np.linalg.norm(np_vel[0:2])
         forward_speed = np.dot(np_vel, np_fvec)
-
+        """
         obs = {
             'speed': np.array([speed], dtype=np.float32),
             'speed_xy': np.array([speed_xy], dtype=np.float32),

@@ -51,21 +51,7 @@ class EgoVehicleHandler(object):
 
     def apply_control(self, action_dict):
         for ev_id, action in action_dict.items():
-            throttle = action[0]
-            steer = action[1] # -1 left 0 ahead 1 right
-            angle = np.arcsin(steer) / 2
-            speed = 3 # Bunu sonra alıcam
-            delta_x = throttle * np.cos(angle) * speed
-            delta_y = throttle * np.sin(angle) * speed
-
-            old_trajectory = self.terminal_handlers[ev_id].ego_vehicle.trajectory
-            last_trajectory = old_trajectory[-1]
-            added_trajectory = np.array([[last_trajectory[0] + delta_x, last_trajectory[1] + delta_y, last_trajectory[2] + angle]])
-            new_trajectory = np.concatenate([old_trajectory, added_trajectory])
-            self.terminal_handlers[ev_id].ego_vehicle.trajectory = new_trajectory
-            self.reward_handlers[ev_id].ego_vehicle.trajectory = new_trajectory
-            self.ego_vehicles[ev_id].steer = steer
-            """
+            # Bicycle model
             ego_vehicle = self.ego_vehicles[ev_id]
             last_state = ego_vehicle.states[-1]
             x,y,heading,velocity,steering_angle,ang_vel = ego_vehicle.motion_model.update(
@@ -79,35 +65,24 @@ class EgoVehicleHandler(object):
             throttle = action[0]
             steer = action[1] # -1 left 0 ahead 1 right
             ego_vehicle.states.append([x,y,heading,velocity,action[0],steering_angle])
-            """
-            """
-            ego_vehicle.commands.append(action)
-       
-            command_states = np.array(ego_vehicle.commands)
-            simulated_states = np.array(ego_vehicle.states)
-            sampling_time = TimePoint(0.5 * 1e6)
-            new_state = self.motion_model.propagate_state(
-                states=simulated_states,
-                command_states=command_states,
-                sampling_time=sampling_time,
-            )[-1]
-            ego_vehicle.states.append(new_state)
-            """
-            # angle = np.arcsin(steer) / 2
-            # speed = 3 # Bunu sonra alıcam
-            # delta_x = throttle * np.cos(angle) * speed
-            # delta_y = throttle * np.sin(angle) * speed
-            
-            # old_trajectory = self.terminal_handlers[ev_id].ego_vehicle.trajectory
-            # last_trajectory = old_trajectory[-1]
-            # added_trajectory = np.array([[last_trajectory[0] + delta_x, last_trajectory[1] + delta_y, last_trajectory[2] + angle]])
-            # new_trajectory = np.concatenate([old_trajectory, added_trajectory])
-            # self.terminal_handlers[ev_id].ego_vehicle.trajectory = new_trajectory
-            # self.reward_handlers[ev_id].ego_vehicle.trajectory = new_trajectory
-            # self.ego_vehicles[ev_id].steer = steer
-            """
             added_trajectory = ego_vehicle.states[-1][:3]
             new_trajectory = np.concatenate([ego_vehicle.trajectory, [added_trajectory]])
+            self.terminal_handlers[ev_id].ego_vehicle.trajectory = new_trajectory
+            self.reward_handlers[ev_id].ego_vehicle.trajectory = new_trajectory
+            self.ego_vehicles[ev_id].steer = steer
+            """
+            OLD METHOD
+            throttle = action[0]
+            steer = action[1] # -1 left 0 ahead 1 right
+            angle = np.arcsin(steer) / 2
+            speed = 3 # Bunu sonra alıcam
+            delta_x = throttle * np.cos(angle) * speed
+            delta_y = throttle * np.sin(angle) * speed
+
+            old_trajectory = self.terminal_handlers[ev_id].ego_vehicle.trajectory
+            last_trajectory = old_trajectory[-1]
+            added_trajectory = np.array([[last_trajectory[0] + delta_x, last_trajectory[1] + delta_y, last_trajectory[2] + angle]])
+            new_trajectory = np.concatenate([old_trajectory, added_trajectory])
             self.terminal_handlers[ev_id].ego_vehicle.trajectory = new_trajectory
             self.reward_handlers[ev_id].ego_vehicle.trajectory = new_trajectory
             self.ego_vehicles[ev_id].steer = steer
@@ -154,10 +129,6 @@ class EgoVehicleHandler(object):
                                               for x in self.info_buffers[ev_id]['outside_lane']]) / 1000
                 wrong_lane_length = np.sum([x['distance_traveled']
                                             for x in self.info_buffers[ev_id]['wrong_lane']]) / 1000
-                """
-                if ev._endless:
-                    score_route = completed_length
-                """
                 score_route = completed_length
                 n_collisions_layout = int(len(self.info_buffers[ev_id]['collisions_layout']))
                 n_collisions_vehicle = int(len(self.info_buffers[ev_id]['collisions_vehicle']))

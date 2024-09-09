@@ -4,9 +4,6 @@ from nuplan.common.actor_state.state_representation import StateSE2
 from gym_navsim.utils.conversion import convert_absolute_to_relative_se2_array
 
 class ValeoNoDetPx(object):
-    '''
-    Follow valeo paper as close as possible
-    '''
 
     def __init__(self, ego_vehicle, exploration_suggest=False, eval_mode=False):
         self.ego_vehicle = ego_vehicle
@@ -17,10 +14,6 @@ class ValeoNoDetPx(object):
         
         
         self._eval_mode = eval_mode
-        """
-        Bunlar ne bilmiyorum
-        self._eval_time = 1200
-        """
     def get(self, timestamp):
         """
         # Done condition 1: vehicle blocked

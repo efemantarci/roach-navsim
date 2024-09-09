@@ -24,6 +24,7 @@ class ObsManager(ObsManagerBase):
         self._parent_actor = parent_actor
 
     def get_observation(self):
+        # This is not used
         ev_transform = self._parent_actor.vehicle.get_transform()
         route_plan = self._parent_actor.route_plan
 

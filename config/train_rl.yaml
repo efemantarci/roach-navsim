@@ -8,7 +8,7 @@ actors:
   hero:
     agent: ppo
     reward:
-      entry_point: reward.valeo_action:ValeoAction
+      entry_point: reward.ep_reward_and_pdm:ValeoAction
       kwargs: {}
     terminal:
       entry_point: terminal.valeo_no_det_px:ValeoNoDetPx
